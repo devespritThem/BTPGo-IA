@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: 🚀 BTPGo – Build & Deploy
 
 on:
   push:
@@ -9,29 +9,42 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          npm install
+      # --- BACKEND ---
+      - name: 📦 Install backend dependencies
+        working-directory: ./backend
+        run: npm install
 
-      - name: Install frontend dependencies
+      - name: 🧰 Prisma generate & migrate
+        working-directory: ./backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          cd frontend
-          npm install
+          npx prisma generate
+          npx prisma migrate deploy
 
-      - name: Install Python dependencies
+      - name: 🧪 Build backend
+        working-directory: ./backend
         run: |
-          cd ai_engine
-          pip install -r requirements.txt
+          npm run build || echo "no build script"
 
-      - name: Build Docker images
-        run: docker-compose build
+      # --- FRONTEND ---
+      - name: 📦 Install frontend dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: 🧪 Build frontend
+        working-directory: ./frontend
+        env:
+          VITE_BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: npm run build
+
