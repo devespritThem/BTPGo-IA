@@ -1,0 +1,42 @@
+name: Fly IPv6 + Cert Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Fly.io app name
+        required: true
+        default: btpgo-backend
+      domain:
+        description: Custom domain (e.g. api.msmarrakech.com)
+        required: true
+
+jobs:
+  setup-fly:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Allocate IPv6 and show IPs
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -e
+          APP="${{ github.event.inputs.app }}"
+          DOMAIN="${{ github.event.inputs.domain }}"
+          echo "App=$APP Domain=$DOMAIN"
+          flyctl ips allocate-v6 --app "$APP" || true
+          echo "Current IPs:"
+          flyctl ips list --app "$APP"
+      - name: Create certificate
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -e
+          APP="${{ github.event.inputs.app }}"
+          DOMAIN="${{ github.event.inputs.domain }}"
+          flyctl certs create "$DOMAIN" --app "$APP" || true
+          flyctl certs show "$DOMAIN" --app "$APP"
+

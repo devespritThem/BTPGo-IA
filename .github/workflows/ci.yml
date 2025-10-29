@@ -22,14 +22,13 @@ jobs:
           --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     defaults:
       run:
-        working-directory: btpgo/backend
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: btpgo/backend/package.json
       - run: npm ci || npm install
       - run: npx prisma generate
       - name: Prepare DB schema
@@ -42,14 +41,13 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: btpgo/frontend
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: btpgo/frontend/package.json
       - run: npm ci || npm install
       - run: echo "VITE_API_URL=http://localhost:3000" > .env
       - run: npm run build
@@ -57,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: btpgo/ai_engine
+        working-directory: ai_engine
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

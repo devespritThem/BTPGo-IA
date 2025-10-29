@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: BTPGo-IA-Suite/frontend
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,4 +32,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist.zip
-          path: BTPGo-IA-Suite/frontend/frontend-dist.zip
+          path: frontend/frontend-dist.zip
