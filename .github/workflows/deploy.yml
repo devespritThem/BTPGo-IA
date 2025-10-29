@@ -63,9 +63,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build images for scan
         run: |
-          docker build -t btpgo-backend ./BTPGo-IA-Suite/backend
-          docker build -t btpgo-frontend ./BTPGo-IA-Suite/frontend
-          docker build -t btpgo-ai ./BTPGo-IA-Suite/ai_engine
+          docker build -t btpgo-backend ./backend
+          docker build -t btpgo-frontend ./frontend
+          docker build -t btpgo-ai ./ai_engine
       - name: Trivy scan backend (table, non-blocking)
         uses: aquasecurity/trivy-action@0.24.0
         with:
