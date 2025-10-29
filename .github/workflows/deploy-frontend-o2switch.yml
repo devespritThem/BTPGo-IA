@@ -1,11 +1,7 @@
-name: Deploy Frontend to o2switch
+name: Deploy Frontend to o2switch (manual)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - 'frontend/**'
 
 jobs:
   build-and-deploy:
