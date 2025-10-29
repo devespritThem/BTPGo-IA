@@ -138,6 +138,7 @@ jobs:
       - name: Build Frontend
         working-directory: BTPGo-IA-Suite/frontend
         run: |
+          echo "VITE_API_URL=https://btpgo-backend.fly.dev" > .env
           npm ci || npm install
           npm run build
       - name: SFTP Deploy Frontend
