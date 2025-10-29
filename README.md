@@ -58,7 +58,7 @@ Variables d’Environnement (essentiel)
 
 Liens Production (exemple / à adapter)
 - Backend (Fly.io): `https://<app>.fly.dev/health`
-- Frontend (o2switch): `https://www.<votre-domaine>`
+- Frontend (o2switch): `https://www.msmarrakech.com/`
 - API via Nginx (dev): `http://localhost:8080/api/health`
 
 CI/CD (Deploy)
