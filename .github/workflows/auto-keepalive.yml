@@ -1,29 +1,19 @@
-name: 🔄 Auto Keepalive Commit
+name: 🔄 Auto Keepalive
 
 on:
-  push:
-    branches:
-      - main
   schedule:
-    - cron: "0 6 * * *" # exécution automatique tous les jours à 6h du matin UTC
+    - cron: "0 6 * * *"
 
 jobs:
   keepalive:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 🧩 Checkout du dépôt
-        uses: actions/checkout@v4
-
-      - name: 📝 Créer le fichier keepalive.md s'il n'existe pas
-        run: |
+      - uses: actions/checkout@v4
+      - run: |
           mkdir -p .github
           echo "ok" > .github/keepalive.md
-
-      - name: 🧠 Commit et push automatique
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .github/keepalive.md
-          git commit -m "Auto keepalive commit" || echo "Aucun changement à committer"
+          git commit -m "Auto keepalive" || echo "No changes"
           git push
