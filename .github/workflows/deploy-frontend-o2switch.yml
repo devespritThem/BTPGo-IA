@@ -1,0 +1,32 @@
+name: Deploy Frontend to o2switch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'btpgo/frontend/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: btpgo/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: btpgo/frontend/package.json
+      - run: npm ci
+      - run: npm run build
+      - name: SFTP Deploy to o2switch
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          server: ${{ secrets.O2SWITCH_SFTP_HOST }}
+          username: ${{ secrets.O2SWITCH_SFTP_USER }}
+          password: ${{ secrets.O2SWITCH_SFTP_PASS }}
+          local_path: btpgo/frontend/dist/*
+          remote_path: ${{ secrets.O2SWITCH_SFTP_PATH || '/public_html' }}

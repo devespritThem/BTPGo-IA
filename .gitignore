@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.*
+.DS_Store
+*.log
+coverage/
+.turbo/
+.pnpm-store/
+.vscode/
+.idea/
+*.sqlite
+*.db
+*.db-journal
+backend/storage/
