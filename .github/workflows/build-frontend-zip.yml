@@ -1,0 +1,35 @@
+name: Build Frontend ZIP
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'BTPGo-IA-Suite/frontend/**'
+
+jobs:
+  build-zip:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: BTPGo-IA-Suite/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Build frontend (prod)
+        run: |
+          echo "VITE_API_URL=https://api.msmarrakech.com" > .env
+          npm ci || npm install
+          npm run build
+      - name: Create ZIP artifact
+        run: |
+          cd dist
+          zip -r ../frontend-dist.zip .
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist.zip
+          path: BTPGo-IA-Suite/frontend/frontend-dist.zip

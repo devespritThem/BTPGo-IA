@@ -15,7 +15,6 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: BTPGo-IA-Suite/backend/package.json
       - name: Backend lint + test + build
         working-directory: BTPGo-IA-Suite/backend
         env:
@@ -32,7 +31,6 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: BTPGo-IA-Suite/frontend/package.json
       - name: Frontend test + build
         working-directory: BTPGo-IA-Suite/frontend
         run: |
@@ -138,7 +136,7 @@ jobs:
       - name: Build Frontend
         working-directory: BTPGo-IA-Suite/frontend
         run: |
-          echo "VITE_API_URL=https://btpgo-backend.fly.dev" > .env
+          echo "VITE_API_URL=https://api.msmarrakech.com" > .env
           npm ci || npm install
           npm run build
       - name: SFTP Deploy Frontend
