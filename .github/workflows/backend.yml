@@ -1,0 +1,50 @@
+name: 🛠️ Backend CI/CD
+
+on:
+  push:
+    branches: [ main, dev ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        working-directory: backend
+        run: npm install
+
+      - name: Prisma
+        working-directory: backend
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+
+      - name: Tests
+        working-directory: backend
+        run: npm test
+
+      - name: Start sanity check
+        working-directory: backend
+        run: node -e "console.log('backend ok')"
+
+      # Optionnel : Déploiement Render
+      - name: Deploy to Render (backend)
+        if: github.ref == 'refs/heads/main' && secrets.RENDER_API_KEY != ''
+        run: curl -X POST "https://api.render.com/deploy/srv-XXXX?key=${{ secrets.RENDER_API_KEY }}"
