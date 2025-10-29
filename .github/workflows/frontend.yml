@@ -1,0 +1,41 @@
+name: 🎨 Frontend CI/CD
+
+on:
+  push:
+    branches: [ main, dev ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      VITE_BACKEND_URL: ${{ secrets.BACKEND_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        working-directory: frontend
+        run: npm install
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build sanity check
+        run: echo "frontend build ok"
+
+      # Optionnel : Déploiement Render du frontend (static ou web service)
+      - name: Deploy to Render (frontend)
+        if: github.ref == 'refs/heads/main' && secrets.RENDER_API_KEY != ''
+        run: curl -X POST "https://api.render.com/deploy/srv-YYYY?key=${{ secrets.RENDER_API_KEY }}"
