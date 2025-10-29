@@ -1,0 +1,29 @@
+# Root ignore for the monorepo
+
+# Env files / secrets
+.env
+*.env.local
+**/.env
+**/.env.local
+
+# Node
+backend/node_modules/
+frontend/node_modules/
+**/npm-debug.log*
+**/yarn-error.log*
+
+# Builds / bundles
+frontend/dist/
+**/dist/
+**/build/
+
+# Python cache
+ai_engine/__pycache__/
+**/.pytest_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

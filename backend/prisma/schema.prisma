@@ -7,11 +7,124 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Org {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users      UserOrg[]
+  marches    Marche[]
+  devis      Devis[]
+  chantiers  Chantier[]
+  subscription Subscription?
+}
+
+model UserOrg {
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  org       Org    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId     String
+  role      String @default("member")
+  createdAt DateTime @default(now())
+  @@id([userId, orgId])
+}
+
 model User {
   id        String  @id @default(cuid())
   email     String  @unique
   password  String
-  role      String  @default("owner") // owner, admin, user
+  role      String  @default("user") // owner, admin, user
+  twoFAEnabled Boolean @default(false)
+  twoFASecret  String?
+  backupCodes  String? // deprecated: replaced by BackupCode model
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  backupCodesRel BackupCode[]
+  securityEvents SecurityEvent[] @relation("SecurityEventUser")
+  orgs          UserOrg[]
+  defaultOrgId  String?
+  defaultOrg    Org?     @relation(fields: [defaultOrgId], references: [id])
+}
+
+model Marche {
+  id        String   @id @default(cuid())
+  title     String
+  status    String   @default("draft")
+  notes     String?
+  clientInfo String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id])
+  @@index([orgId])
+}
+
+model Devis {
+  id        String   @id @default(cuid())
+  ref       String
+  amount    Float    @default(0)
+  status    String   @default("draft")
+  clientInfo String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id])
+  @@index([orgId])
+  @@unique([ref, orgId])
+}
+
+model Chantier {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  contact   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id])
+  @@index([orgId])
+}
+
+model BackupCode {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model SecurityEvent {
+  id         String   @id @default(cuid())
+  user       User?    @relation("SecurityEventUser", fields: [userId], references: [id])
+  userId     String?
+  action     String
+  ip         String?
+  userAgent  String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+  @@index([userId, action, createdAt])
+}
+
+model Subscription {
+  id                 String   @id @default(cuid())
+  orgId              String   @unique
+  org                Org      @relation(fields: [orgId], references: [id])
+  customerId         String?
+  subscriptionId     String?  @unique
+  plan               String?
+  status             String?
+  seats              Int?     @default(1)
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([subscriptionId])
 }

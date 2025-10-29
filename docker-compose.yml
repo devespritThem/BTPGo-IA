@@ -1,27 +1,97 @@
 version: "3.9"
+
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
+    environment:
+      PORT: 4000
+      NODE_ENV: development
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      SEED: ${SEED:-true}
+      MIGRATE_ON_START: ${MIGRATE_ON_START:-true}
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     ports:
       - "4000:4000"
-    volumes:
-      - ./backend:/app
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build: ./frontend
+    environment:
+      VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
     depends_on:
       - backend
-    restart: always
+    restart: unless-stopped
 
   ai_engine:
     build: ./ai_engine
+    environment:
+      PYTHONUNBUFFERED: "1"
     ports:
       - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    build: ./infra/nginx
+    depends_on:
+      - frontend
+      - backend
+      - ai_engine
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["monitoring"]
     volumes:
-      - ./ai_engine:/app
-    restart: always
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    profiles: ["monitoring"]
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  migrations:
+    build: ./backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      NODE_ENV: development
+      SEED: ${SEED:-true}
+    entrypoint: ["sh","-lc","npx prisma generate && npx prisma migrate deploy && if [ \"$SEED\" = \"true\" ]; then node seed.js; fi"]
+    restart: "no"

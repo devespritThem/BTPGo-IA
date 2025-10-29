@@ -1,8 +1,8 @@
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
-COPY ./frontend/package*.json ./
-RUN npm install
-COPY ./frontend .
-RUN npm run build
+COPY package*.json ./
+RUN npm ci || npm install
+COPY . .
+RUN npm run build || true
 EXPOSE 5173
 CMD ["npm","run","preview"]

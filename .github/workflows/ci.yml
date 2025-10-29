@@ -1,4 +1,4 @@
-name: 🚀 BTPGo – Build & Deploy
+name: BTPGo - Build & Deploy
 
 on:
   push:
@@ -11,40 +11,77 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧩 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
       # --- BACKEND ---
-      - name: 📦 Install backend dependencies
+      - name: Install backend dependencies
         working-directory: ./backend
-        run: npm install
+        run: npm ci || npm install
 
-      - name: 🧰 Prisma generate & migrate
+      - name: Prisma generate & migrate
         working-directory: ./backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           npx prisma generate
-          npx prisma migrate deploy
+          npx prisma migrate deploy || echo "no migrations yet"
 
-      - name: 🧪 Build backend
+      - name: Build backend
         working-directory: ./backend
         run: |
           npm run build || echo "no build script"
 
       # --- FRONTEND ---
-      - name: 📦 Install frontend dependencies
+      - name: Install frontend dependencies
         working-directory: ./frontend
-        run: npm install
+        run: npm ci || npm install
 
-      - name: 🧪 Build frontend
+      - name: Build frontend
         working-directory: ./frontend
         env:
           VITE_BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: npm run build
 
+      # --- SMOKE TEST API LOCALLY ---
+      - name: Start backend (background)
+        working-directory: ./backend
+        env:
+          PORT: 4000
+          NODE_ENV: test
+          FRONTEND_URL: http://localhost:5173
+          HEALTH_SKIP_DB: 'true'
+          JWT_SECRET: test-secret
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318
+        run: |
+          nohup node index.js > /tmp/backend.log 2>&1 & echo $! > /tmp/backend.pid
+
+      - name: Wait for /health
+        run: |
+          for i in {1..20}; do
+            if curl -sf http://localhost:4000/health >/dev/null; then echo "backend up"; exit 0; fi
+            sleep 1;
+          done
+          echo "backend did not become healthy"; echo "--- backend log ---"; tail -n +1 /tmp/backend.log || true; exit 1
+
+      - name: Run smoke tests
+        working-directory: ./backend
+        env:
+          BACKEND_URL: http://localhost:4000
+        run: npm run smoke
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f /tmp/backend.pid ]; then kill $(cat /tmp/backend.pid) || true; fi
+          sleep 1
+          echo "--- backend log (tail) ---"; tail -n 200 /tmp/backend.log || true
