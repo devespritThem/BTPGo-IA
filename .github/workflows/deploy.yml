@@ -67,12 +67,12 @@ jobs:
           docker build -t btpgo-backend ./BTPGo-IA-Suite/backend
           docker build -t btpgo-frontend ./BTPGo-IA-Suite/frontend
           docker build -t btpgo-ai ./BTPGo-IA-Suite/ai_engine
-      - name: Trivy scan backend (table)
+      - name: Trivy scan backend (table, blocking)
         uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: 'btpgo-backend'
           format: 'table'
-          exit-code: '0'
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
       - name: Trivy scan backend (json)
         uses: aquasecurity/trivy-action@0.24.0
@@ -80,12 +80,12 @@ jobs:
           image-ref: 'btpgo-backend'
           format: 'json'
           output: 'trivy-backend.json'
-      - name: Trivy scan frontend (table)
+      - name: Trivy scan frontend (table, blocking)
         uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: 'btpgo-frontend'
           format: 'table'
-          exit-code: '0'
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
       - name: Trivy scan frontend (json)
         uses: aquasecurity/trivy-action@0.24.0
@@ -93,12 +93,12 @@ jobs:
           image-ref: 'btpgo-frontend'
           format: 'json'
           output: 'trivy-frontend.json'
-      - name: Trivy scan ai_engine (table)
+      - name: Trivy scan ai_engine (table, blocking)
         uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: 'btpgo-ai'
           format: 'table'
-          exit-code: '0'
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
       - name: Trivy scan ai_engine (json)
         uses: aquasecurity/trivy-action@0.24.0

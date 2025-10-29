@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import GettingStarted from './pages/GettingStarted';
 
 function App() {
   const [status, setStatus] = useState('loading...');
@@ -14,9 +15,9 @@ function App() {
     <div style={{ fontFamily: 'system-ui, sans-serif', padding: 24 }}>
       <h1>BTPGo IA Suite</h1>
       <p>Status: {status}</p>
+      <GettingStarted />
     </div>
   );
 }
 
 export default App;
-
