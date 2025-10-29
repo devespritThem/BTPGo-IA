@@ -120,14 +120,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Read app name from fly.toml
+        id: app
+        run: |
+          APP=$(awk -F '"' '/^app\s*=/{print $2}' infra/fly.toml)
+          echo "app=$APP" >> $GITHUB_OUTPUT
+          echo "APP=$APP" >> $GITHUB_ENV
+      - name: Ensure Fly app exists
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -e
+          if ! flyctl apps list | awk '{print $1}' | grep -qx "$APP"; then
+            echo "Creating Fly app $APP";
+            flyctl apps create "$APP";
+          else
+            echo "Fly app $APP already exists";
+          fi
       - name: Deploy Backend to Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl deploy --remote-only --config infra/fly.toml
+          set -e
+          flyctl deploy --remote-only --config infra/fly.toml || (echo "::error::Fly deploy failed"; flyctl status --app "$APP" || true; exit 1)
       - name: Health check (backend)
         run: |
-          APP=$(awk -F '"' '/^app\s*=/{print $2}' infra/fly.toml)
           echo "App: $APP"
           for i in {1..40}; do
             curl -fsS https://$APP.fly.dev/health && exit 0 || sleep 10;
