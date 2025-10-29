@@ -141,13 +141,15 @@ jobs:
           npm run build
       - name: SFTP secrets check
         run: |
+          ok=true
           if [ -z "${{ secrets.SFTP_HOST }}" ] || [ -z "${{ secrets.SFTP_USER }}" ] || [ -z "${{ secrets.SFTP_PASS }}" ]; then
-            echo "::warning::SFTP secrets missing (SFTP_HOST/USER/PASS). Skipping SFTP deploy.";
-            exit 0;
+            echo "::warning::SFTP secrets missing (SFTP_HOST/USER/PASS). Skipping SFTP deploy."
+            ok=false
           fi
+          echo "SFTP_OK=$ok" >> $GITHUB_ENV
 
       - name: SFTP Deploy Frontend
-        if: ${{ secrets.SFTP_HOST != '' && secrets.SFTP_USER != '' && secrets.SFTP_PASS != '' }}
+        if: ${{ env.SFTP_OK == 'true' }}
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
           server: ${{ secrets.SFTP_HOST }}
