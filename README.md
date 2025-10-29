@@ -100,3 +100,4 @@ RH & Matériel
 - Employés: `GET/POST /hr/employees`, `GET /hr/employees/:id/qr`
 - Pointage: `POST /hr/attendance/checkin`, `POST /hr/attendance/checkout`, `GET /hr/attendance`
 - Vision: `POST /vision/qr/scan` (validation QR via AI Engine)
+
