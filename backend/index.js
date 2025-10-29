@@ -1,16 +1,31 @@
 import express from "express";
 import cors from "cors";
-import bodyParser from "body-parser";
+import helmet from "helmet";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
+import { PrismaClient } from "@prisma/client";
+
 dotenv.config();
-
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
+const prisma = new PrismaClient();
+const PORT = process.env.PORT || 3000;
 
-app.get("/", (req, res) => {
-  res.json({ message: "🚀 BTPGo Backend API Running" });
+app.use(helmet());
+app.use(cors({ origin: [process.env.FRONTEND_URL], credentials: true }));
+app.use(express.json());
+
+app.get("/health", (_, res) => res.json({ ok: true, ts: Date.now() }));
+
+// Exemple route sécurisée
+app.get("/me", async (req, res) => {
+  try {
+    const token = (req.headers.authorization || "").replace("Bearer ", "");
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    res.json({ user });
+  } catch (e) {
+    res.status(401).json({ error: "unauthorized" });
+  }
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`API running on ${PORT}`));
