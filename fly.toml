@@ -6,8 +6,17 @@
 app = 'btpgo-api'
 primary_region = 'cdg'
 
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[env]
+  PORT = "4000"
+
+[deploy]
+  release_command = "sh -lc 'npx prisma migrate deploy'"
+
 [http_service]
-  internal_port = 8080
+  internal_port = 4000
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
