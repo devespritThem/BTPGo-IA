@@ -1,4 +1,4 @@
-FROM node:22-alpine AS base
+FROM node:20-alpine AS base
 WORKDIR /app
 
 # Install dependencies for dev (generator) and prod
@@ -10,7 +10,7 @@ COPY prisma ./prisma
 RUN npx prisma generate || true
 
 # Runtime image: minimal prod deps + prisma CLI for release_command
-FROM node:22-alpine AS runtime
+FROM node:20-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package*.json ./
