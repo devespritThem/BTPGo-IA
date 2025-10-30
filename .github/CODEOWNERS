@@ -1,0 +1,10 @@
+# Code owners for reviews and protection
+# Adjust handles to your team as needed
+
+* @devespritThem
+
+# Example granular ownership (uncomment and adjust if needed)
+# /backend/ @devespritThem
+# /frontend/ @devespritThem
+# /ai_engine/ @devespritThem
+

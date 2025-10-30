@@ -13,7 +13,10 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "seed": "node seed.js",
-    "lint": "echo 'no lint configured yet'",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "smoke": "node scripts/smoke.js"
   },
   "dependencies": {
@@ -43,6 +46,10 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
     "prisma": "^5.22.0"
   },
   "optionalDependencies": {}
