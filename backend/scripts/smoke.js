@@ -18,7 +18,8 @@ async function get(path) {
     if (health.status !== 200) throw new Error(`GET /health => ${health.status}`);
     try {
       const json = JSON.parse(health.text);
-      if (!json.ok) throw new Error('health not ok');
+      const healthy = (json && (json.ok === true || json.status === 'ok'));
+      if (!healthy) throw new Error('health not ok');
     } catch (e) {
       throw new Error('health invalid JSON');
     }

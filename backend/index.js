@@ -31,7 +31,50 @@ const OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET || "";
 const OIDC_REDIRECT_URI = process.env.OIDC_REDIRECT_URI || "";
 
 app.use(helmet());
-app.use(cors({ origin: [FRONTEND_URL], credentials: true }));
+// CORS configuration: allow explicit origins (no wildcard when credentials=true)
+const DEFAULT_CORS = [
+  FRONTEND_URL,
+  'https://www.msmarrakech.com',
+  'https://msmarrakech.com',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+].filter(Boolean);
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',')
+  : DEFAULT_CORS
+).map(s => s.trim()).filter(Boolean);
+function matchesOrigin(origin, pattern) {
+  try {
+    if (!pattern) return false;
+    if (pattern === '*') return true;
+    // Wildcard subdomain support: https://*.domain.tld
+    if (pattern.startsWith('https://*.') || pattern.startsWith('http://*.')) {
+      const proto = pattern.startsWith('https://') ? 'https://' : 'http://';
+      const base = pattern.replace('https://*.', 'https://').replace('http://*.', 'http://');
+      return origin.toLowerCase() === base.toLowerCase() || origin.toLowerCase().endsWith('.' + base.replace(/^https?:\/\//, '').toLowerCase());
+    }
+    // Exact match by origin
+    const o = new URL(origin).origin;
+    const p = new URL(pattern).origin;
+    return o === p;
+  } catch {
+    return false;
+  }
+}
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // allow curl/postman
+    const ok = ALLOWED_ORIGINS.some(p => matchesOrigin(origin, p));
+    cb(ok ? null : new Error('CORS not allowed'), ok);
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','x-org-id'],
+  exposedHeaders: ['Content-Length','Content-Type'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+}));
+app.options('*', cors());
 // Stripe webhook: must be registered before express.json to use raw body
 const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
@@ -97,9 +140,9 @@ app.get("/health", async (_, res) => {
     if (!(skip === '1' || skip === 'true')) {
       await prisma.$queryRaw`SELECT 1`;
     }
-    res.json({ ok: true, ts: Date.now() });
+    res.json({ status: 'ok' });
   } catch (e) {
-    res.status(500).json({ ok: false, error: "db_unreachable" });
+    res.status(500).json({ status: 'error', error: "db_unreachable" });
   }
 });
 
