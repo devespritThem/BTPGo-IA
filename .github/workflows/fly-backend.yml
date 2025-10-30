@@ -11,6 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FLY_BACKEND_APP: ${{ secrets.FLY_BACKEND_APP || 'btpgo-backend' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,14 +34,14 @@ jobs:
             FRONTEND_URL="$FRONTEND_URL" \
             MIGRATE_ON_START="true" \
             SEED="false" \
-            --app btpgo-backend
+            --app "${{ env.FLY_BACKEND_APP }}"
 
       - name: Deploy Backend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           cd backend
-          flyctl deploy --remote-only --config fly.toml --app btpgo-backend
+          flyctl deploy --remote-only --config fly.toml --app "${{ env.FLY_BACKEND_APP }}"
 
       - name: Setup Node for smoke
         uses: actions/setup-node@v4

@@ -1,6 +1,6 @@
 # Fly.io configuration for BTPGo Backend (Express)
 
-app = "btpgo-backend"
+app = "btpgo-api"
 primary_region = "cdg"
 
 [build]

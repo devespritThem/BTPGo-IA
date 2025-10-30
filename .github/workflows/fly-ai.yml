@@ -11,6 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FLY_AI_APP: ${{ secrets.FLY_AI_APP || 'btpgo-ai' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -22,7 +24,7 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           cd ai_engine
-          flyctl deploy --remote-only --config fly.toml --app btpgo-ai
+          flyctl deploy --remote-only --config fly.toml --app "${{ env.FLY_AI_APP }}"
 
       - name: Wait for AI health (Fly URL)
         if: ${{ secrets.AI_URL_FLY != '' }}
