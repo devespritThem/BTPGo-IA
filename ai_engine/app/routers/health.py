@@ -4,5 +4,5 @@ router = APIRouter()
 
 @router.get("/")
 def read_root():
-    return {"ok": True, "service": "ai_engine"}
+    return {"status": "ok", "service": "btpgo-ai", "version": "1.0"}
 

@@ -1,0 +1,11 @@
+name: Daily Prod Health Check
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  run_smoke:
+    uses: ./.github/workflows/smoke-prod.yml
+

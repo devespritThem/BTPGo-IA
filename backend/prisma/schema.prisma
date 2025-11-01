@@ -7,124 +7,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Org {
-  id         String   @id @default(cuid())
-  name       String
-  slug       String   @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  users      UserOrg[]
-  marches    Marche[]
-  devis      Devis[]
-  chantiers  Chantier[]
-  subscription Subscription?
-}
-
-model UserOrg {
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  org       Org    @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  orgId     String
-  role      String @default("member")
-  createdAt DateTime @default(now())
-  @@id([userId, orgId])
-}
-
 model User {
-  id        String  @id @default(cuid())
-  email     String  @unique
-  password  String
-  role      String  @default("user") // owner, admin, user
-  twoFAEnabled Boolean @default(false)
-  twoFASecret  String?
-  backupCodes  String? // deprecated: replaced by BackupCode model
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  role         String   @default("user")
+  passwordHash String
+  createdAt    DateTime @default(now())
 
-  backupCodesRel BackupCode[]
-  securityEvents SecurityEvent[] @relation("SecurityEventUser")
-  orgs          UserOrg[]
-  defaultOrgId  String?
-  defaultOrg    Org?     @relation(fields: [defaultOrgId], references: [id])
+  // Relations
+  projects Project[]
+  tasks    Task[]    @relation("UserTasks")
 }
 
-model Marche {
-  id        String   @id @default(cuid())
-  title     String
-  status    String   @default("draft")
-  notes     String?
-  clientInfo String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  budget      Float?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
 
-  orgId     String
-  org       Org      @relation(fields: [orgId], references: [id])
-  @@index([orgId])
+  // Relations
+  members User[]
+  tasks   Task[]
 }
 
-model Devis {
-  id        String   @id @default(cuid())
-  ref       String
-  amount    Float    @default(0)
-  status    String   @default("draft")
-  clientInfo String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Task {
+  id       String    @id @default(cuid())
+  title    String
+  progress Int       @default(0)
+  dueDate  DateTime?
 
-  orgId     String
-  org       Org      @relation(fields: [orgId], references: [id])
-  @@index([orgId])
-  @@unique([ref, orgId])
-}
+  // Relations
+  assignedToId String?
+  assignedTo   User?   @relation("UserTasks", fields: [assignedToId], references: [id])
 
-model Chantier {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  contact   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  orgId     String
-  org       Org      @relation(fields: [orgId], references: [id])
-  @@index([orgId])
-}
-
-model BackupCode {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  codeHash  String
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
-}
-
-model SecurityEvent {
-  id         String   @id @default(cuid())
-  user       User?    @relation("SecurityEventUser", fields: [userId], references: [id])
-  userId     String?
-  action     String
-  ip         String?
-  userAgent  String?
-  meta       Json?
-  createdAt  DateTime @default(now())
-  @@index([userId, action, createdAt])
-}
-
-model Subscription {
-  id                 String   @id @default(cuid())
-  orgId              String   @unique
-  org                Org      @relation(fields: [orgId], references: [id])
-  customerId         String?
-  subscriptionId     String?  @unique
-  plan               String?
-  status             String?
-  seats              Int?     @default(1)
-  currentPeriodEnd   DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@index([subscriptionId])
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
 }

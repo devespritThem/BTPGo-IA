@@ -1,0 +1,28 @@
+name: Deploy AI Engine (Fly)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ai_engine/**'
+      - '.github/workflows/deploy-ai-fly.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FLY_AI_APP: ${{ secrets.FLY_AI_APP || 'btpgo-ai' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@v1
+
+      - name: Deploy AI Engine (ai_engine/fly.toml)
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl deploy --remote-only --config ai_engine/fly.toml --app "${{ env.FLY_AI_APP }}"
+

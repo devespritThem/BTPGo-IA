@@ -1,0 +1,51 @@
+name: Deploy backend to Fly.io
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Ne lance pas le job si le token Fly est absent
+    if: ${{ secrets.FLY_API_TOKEN != '' }}
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      BACKEND_URL_FLY: ${{ secrets.BACKEND_URL_FLY }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Vérifier BACKEND_URL_FLY
+        if: ${{ env.BACKEND_URL_FLY == '' }}
+        run: |
+          echo "❌ BACKEND_URL_FLY manquant" 1>&2
+          exit 1
+
+      - name: Deploy backend
+        working-directory: backend
+        run: |
+          flyctl deploy --remote-only
+      - name: Smoke test /api/health
+        env:
+          URL: ${{ env.BACKEND_URL_FLY }}
+        run: |
+          echo "Testing $URL/api/health"
+          for i in {1..10}; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/health" || true)
+            if [ "$code" = "200" ]; then echo "OK"; exit 0; fi
+            echo "Attempt $i -> $code"; sleep 3;
+          done
+          echo "Healthcheck failed" >&2; exit 1

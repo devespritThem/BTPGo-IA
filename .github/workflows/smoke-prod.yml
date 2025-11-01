@@ -1,0 +1,63 @@
+name: Smoke Test Production
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check backend health
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL_PROD }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then echo "BACKEND_URL_PROD secret missing"; exit 1; fi
+          echo "Checking $BACKEND_URL/health"
+          for i in {1..10}; do
+            if curl -sf "$BACKEND_URL/health"; then exit 0; fi
+            sleep 2;
+          done
+          echo "Backend not healthy"; exit 1
+
+      - name: Check backend metrics
+        if: ${{ success() }}
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL_PROD }}
+        run: |
+          curl -sSf "$BACKEND_URL/metrics" | head -n 10 || true
+
+      - name: Test AI Engine Health (with retry)
+        env:
+          AI_URL: ${{ secrets.AI_URL_FLY }}
+        run: |
+          if [ -z "$AI_URL" ]; then echo "AI_URL_FLY secret missing"; exit 1; fi
+          echo "Testing AI Engine..."
+          for i in {1..3}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$AI_URL/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ AI Engine healthy"
+              exit 0
+            fi
+            echo "Retrying ($i/3)..."
+            sleep 5
+          done
+          echo "❌ AI Engine not responding"
+          exit 1
+
+      - name: Check AI engine metrics
+        if: ${{ success() }}
+        env:
+          AI_URL: ${{ secrets.AI_URL_FLY }}
+        run: |
+          curl -sSf "$AI_URL/metrics" | head -n 10 || true
+
+      - name: Check frontend homepage
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL_PROD }}
+        run: |
+          if [ -z "$FRONTEND_URL" ]; then echo "FRONTEND_URL_PROD secret missing"; exit 1; fi
+          echo "Fetching $FRONTEND_URL"
+          curl -sSf "$FRONTEND_URL" -o index.html
+          test -s index.html
+          head -n 5 index.html || true

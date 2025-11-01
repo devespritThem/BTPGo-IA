@@ -22,7 +22,7 @@ jobs:
       - name: Build Frontend
         working-directory: frontend
         env:
-          VITE_BACKEND_URL: ${{ secrets.BACKEND_URL_PROD }}
+          VITE_API_URL: ${{ secrets.BACKEND_URL_PROD }}
         run: |
           npm ci || npm install
           npm run build

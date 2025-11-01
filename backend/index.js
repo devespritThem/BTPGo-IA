@@ -14,7 +14,8 @@ import { PrismaClient } from "@prisma/client";
 let QRCode = null;
 try { QRCode = (await import('qrcode')).default; } catch {}
 import Stripe from "stripe";
-import { Issuer, generators } from "openid-client";
+import * as openidClient from "openid-client";
+const { Issuer, generators } = openidClient;
 import Redis from "ioredis";
 
 dotenv.config();
@@ -61,7 +62,32 @@ function matchesOrigin(origin, pattern) {
     return false;
   }
 }
-app.use(cors({
+
+// Fast-path CORS preflight handling to reduce noise and latency
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    try {
+      const origin = req.headers.origin || '';
+      const allowed = !origin || ALLOWED_ORIGINS.some(p => matchesOrigin(origin, p));
+      if (allowed) {
+        try { console.log(`[CORS] Preflight ${req.method} ${req.originalUrl} from ${origin} => allowed`); } catch {}
+        if (origin) { res.set('Access-Control-Allow-Origin', origin); res.set('Vary', 'Origin'); }
+        res.set('Access-Control-Allow-Credentials', 'true');
+        res.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-org-id,Origin,Accept,X-Requested-With');
+        res.set('Access-Control-Max-Age', '600');
+        try { corsEventsTotal && corsEventsTotal.inc({ event: 'preflight_allowed', method: 'OPTIONS' }); } catch {}
+        return res.sendStatus(204);
+      } else {
+        try { console.warn(`[CORS] Preflight ${req.method} ${req.originalUrl} from ${origin} => blocked`); } catch {}
+        try { corsEventsTotal && corsEventsTotal.inc({ event: 'preflight_blocked', method: 'OPTIONS' }); } catch {}
+        return res.status(403).send('CORS preflight blocked');
+      }
+    } catch {}
+  }
+  next();
+});
+const corsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true); // allow curl/postman
     const ok = ALLOWED_ORIGINS.some(p => matchesOrigin(origin, p));
@@ -69,12 +95,25 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','x-org-id'],
-  exposedHeaders: ['Content-Length','Content-Type'],
+  allowedHeaders: ['Content-Type','Authorization','x-org-id','Origin','Accept','X-Requested-With'],
+  exposedHeaders: ['Content-Length','Content-Type','Content-Disposition','ETag','Authorization'],
   preflightContinue: false,
   optionsSuccessStatus: 204,
-}));
-app.options('*', cors());
+  maxAge: 600,
+};
+// Allow env to override methods/headers
+function parseListEnv(name, fallbackCsv) {
+  const v = (process.env[name] || '').trim();
+  const src = v ? v : fallbackCsv;
+  return src.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+corsOptions.methods = parseListEnv('CORS_ALLOWED_METHODS', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+corsOptions.allowedHeaders = parseListEnv('CORS_ALLOWED_HEADERS', 'Authorization,Content-Type,Accept,x-org-id,Origin,X-Requested-With');
+corsOptions.exposedHeaders = parseListEnv('CORS_EXPOSED_HEADERS', 'Authorization,Content-Length,Content-Disposition,ETag,Content-Type');
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 // Stripe webhook: must be registered before express.json to use raw body
 const stripeSecret = process.env.STRIPE_SECRET_KEY || "";
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
@@ -173,6 +212,26 @@ const authEventsTotal = new client.Counter({
   help: "Authentication events",
   labelNames: ["event"],
   registers: [register],
+});
+
+// CORS security events (allowed/blocked)
+const corsEventsTotal = new client.Counter({
+  name: 'cors_events_total',
+  help: 'CORS decisions (allowed/blocked)',
+  labelNames: ['event', 'method'],
+  registers: [register],
+});
+
+// CORS Audit Logger
+app.use((req, _res, next) => {
+  try {
+    const origin = req.headers.origin;
+    if (origin) {
+      const allowed = ALLOWED_ORIGINS.some(p => matchesOrigin(origin, p));
+      corsEventsTotal.inc({ event: allowed ? 'allowed' : 'blocked', method: req.method });
+    }
+  } catch {}
+  next();
 });
 
 app.use((req, res, next) => {

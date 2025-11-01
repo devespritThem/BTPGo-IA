@@ -24,6 +24,10 @@ FastAPIInstrumentor.instrument_app(app)
 def read_root():
     return {"message": "BTPGo AI Engine Running"}
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "btpgo-ai", "version": "1.0"}
+
 
 class PredictRequest(BaseModel):
     features: list[float]

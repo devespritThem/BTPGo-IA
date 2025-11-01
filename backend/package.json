@@ -4,14 +4,15 @@
   "main": "index.js",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate deploy",
+    "prisma:deploy": "npx prisma migrate deploy",
+    "db:deploy": "npx prisma generate && npx prisma migrate deploy",
     "seed": "node seed.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

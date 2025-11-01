@@ -1,19 +1,17 @@
-# fly.toml app configuration file generated for btpgo-api on 2025-10-30T10:45:35+01:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
-app = 'btpgo-api'
-primary_region = 'cdg'
+# fly.toml app configuration file for BTPGo backend (API)
+app = "btpgo-backend"
+primary_region = "cdg"
 
 [build]
   dockerfile = "backend/Dockerfile"
 
 [env]
   PORT = "4000"
+  NODE_ENV = "production"
 
-[deploy]
-  release_command = "sh -lc 'npx prisma migrate deploy'"
+# ✅ On retire temporairement le release_command bloquant
+# [deploy]
+#   release_command = "sh -lc 'npx prisma migrate deploy'"
 
 [http_service]
   internal_port = 4000
@@ -21,17 +19,17 @@ primary_region = 'cdg'
   auto_stop_machines = true
   auto_start_machines = true
   min_machines_running = 1
-  processes = ['app']
+  processes = ["app"]
 
   [[http_service.checks]]
     port = 4000
     type = "http"
     interval = "15s"
-    timeout = "2s"
-    grace_period = "10s"
+    timeout = "5s"
+    grace_period = "15s"
     path = "/health"
 
 [[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
+  memory = "1gb"
+  cpu_kind = "shared"
   cpus = 1

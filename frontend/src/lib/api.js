@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000'
+const API = (import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL) || 'http://localhost:4000'
 
 export async function apiFetch(path, { method = 'GET', headers = {}, body, token, orgId } = {}) {
   const h = { 'Content-Type': 'application/json', ...headers }

@@ -1,0 +1,29 @@
+name: Test Database Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-db:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Installer client PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Tester la connexion PostgreSQL
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Secret DATABASE_URL manquant"; exit 1;
+          fi
+          echo "Testing connection..."
+          psql "$DATABASE_URL" -c "SELECT NOW();"
+
+      - name: Afficher version serveur (vérification supplémentaire)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          psql "$DATABASE_URL" -c "SELECT version();"
