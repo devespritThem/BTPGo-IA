@@ -1,33 +1,29 @@
-# =========================================================
-# 🚀 BTPGo Backend - Dockerfile compatible Fly.io + Prisma
-# =========================================================
+# ========= Étape 1 : Build environnement Node + OpenSSL =========
+FROM node:20-alpine AS build
 
-FROM node:20-alpine AS base
-WORKDIR /app
-
-# ---- DEPS ----
-FROM base AS deps
-COPY package*.json ./
-RUN npm ci || npm install
-COPY prisma ./prisma
-RUN npx prisma generate || true
-
-# ---- RUNTIME ----
-FROM node:20-alpine AS runtime
+# Empêche l’interruption en cas de prompt interactif
 ENV NODE_ENV=production
-WORKDIR /app
 
-# Install OpenSSL + dos2unix (for Prisma)
+# Ajout des librairies nécessaires à Prisma et OpenSSL
 RUN apk add --no-cache openssl libssl3 libstdc++ dos2unix
 
-COPY package*.json ./
-RUN npm ci --omit=dev || npm install --omit=dev && npm install prisma@^5.22.0 --no-save
+# Création du dossier de travail
+WORKDIR /app
 
-COPY --from=deps /app/node_modules/prisma /app/node_modules/prisma
-COPY --from=deps /app/node_modules/.prisma /app/node_modules/.prisma
+# ====== Copy depuis le bon contexte ======
+# (Fly build part de la racine du dépôt)
+COPY ./backend/package*.json ./
+COPY ./backend/prisma ./prisma
+COPY ./backend ./
 
-COPY . .
-RUN dos2unix entrypoint.sh && chmod +x entrypoint.sh
+# Installation des dépendances
+RUN npm install --omit=dev && dos2unix entrypoint.sh && chmod +x entrypoint.sh
 
+# Génération du client Prisma
+RUN npx prisma generate
+
+# ========= Étape 2 : Exécution =========
 EXPOSE 4000
+
+# Lancement via script d’entrée tolérant (migrations non bloquantes)
 ENTRYPOINT "./entrypoint.sh"
