@@ -3,6 +3,8 @@
 # =========================================================
 
 FROM node:20-alpine AS base
+# cache-bust label to force rebuild when needed
+LABEL org.opencontainers.image.description="BTPGo backend image"
 WORKDIR /app
 
 # Étape 1 : installation des dépendances
