@@ -20,6 +20,7 @@ RUN npx prisma generate || true
 FROM node:20-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+RUN apk add --no-cache dos2unix
 
 # Copie des fichiers essentiels
 COPY ./backend/package*.json ./
@@ -34,4 +35,5 @@ COPY ./backend/prisma ./prisma
 
 # Lancement
 EXPOSE 4000
-CMD ["npm", "run", "start:prod"]
+RUN dos2unix entrypoint.sh && chmod 755 entrypoint.sh
+ENTRYPOINT ["./entrypoint.sh"]
