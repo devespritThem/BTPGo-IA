@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
+import systemRouter from "./routes/system.js";
 
 const app = express();
 const prisma = new PrismaClient();
@@ -9,6 +10,7 @@ const PORT = Number(process.env.PORT || 4000);
 
 app.use(cors());
 app.use(express.json());
+app.use(systemRouter);
 
 app.get("/", (_req, res) => res.json({ message: "BTPGo Backend running" }));
 app.get("/health", async (_req, res) => {

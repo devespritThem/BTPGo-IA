@@ -1,0 +1,72 @@
+name:  BTPGo Backend Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches:  main
+
+jobs:
+  backend_diagnostic:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Codex CLI
+        run: npm install -g openai/codex || true
+
+      - name: Codex Diagnostic
+        run: |
+          npx codex analyze ./backend \
+            --summary \
+            --tags "flyio, prisma, backend, monitoring, diagnostics" \
+            --goal "Vérifier Dockerfile (CMD npm start), Prisma généré dans l’image, entrypoint non bloquant, endpoints /health & /metrics OK."
+
+      - name: Vérifier Prisma localement
+        working-directory: ./backend
+        run: |
+          npm install
+          npx prisma generate
+          node -e "require('fs').accessSync('./node_modules/@prisma/client/index.js'); console.log('✅ prisma-client OK');"
+
+      - name: Build Docker backend
+        run: |
+          docker build -t btpgo-backend:test -f backend/Dockerfile .
+          docker run -d -p 4000:4000 --name btpgo btpgo-backend:test
+          sleep 10
+          curl -sSf http://localhost:4000/health || (echo "❌ health fail" && docker logs btpgo && exit 1)
+          curl -sSf http://localhost:4000/ || (echo "❌ root fail" && docker logs btpgo && exit 1)
+          docker rm -f btpgo
+
+      - name: Install flyctl (if token provided)
+        if: ${{ secrets.FLY_API_TOKEN != '' }}
+        run: |
+          curl -L https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> $GITHUB_PATH
+
+      - name: Vérifier Fly.io déploiement
+        if: ${{ secrets.FLY_API_TOKEN != '' }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          fly status -a btpgo-backend || true
+          curl -sSf https://btpgo-backend.fly.dev/health || echo "❌ health fail (remote)"
+          curl -sSf https://btpgo-backend.fly.dev/version || echo "❌ version fail (remote)"
+          curl -sSf https://btpgo-backend.fly.dev/metrics || echo "❌ metrics fail (remote)"
+
+      - name: ✅ Résumé Diagnostic
+        run: |
+          echo "------------------------------------------------"
+          echo " BTPGo Backend Diagnostic Summary"
+          echo "------------------------------------------------"
+          echo " Codex Analysis : OK"
+          echo " Prisma Client  : OK"
+          echo " Docker Build   : OK"
+          echo " Fly.io Health  : $(curl -s -o /dev/null -w '%http_code' https://btpgo-backend.fly.dev/health)"
+          echo "------------------------------------------------"
