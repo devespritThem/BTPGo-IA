@@ -3,8 +3,6 @@ import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import prismaInstrumentationPkg from '@prisma/instrumentation';
-const { PrismaInstrumentation } = prismaInstrumentationPkg;
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
 
 const serviceName = process.env.OTEL_SERVICE_NAME || 'btpgo-backend';
@@ -14,24 +12,36 @@ const traceExporter = new OTLPTraceExporter({
   url: `${otlpEndpoint.replace(/\/$/, '')}/v1/traces`,
 });
 
-registerInstrumentations({
-  instrumentations: [
-    new PrismaInstrumentation(),
-  ],
-});
+// Try to include Prisma instrumentation without crashing if unavailable
+let instrumentations = [];
+try {
+  const prismaPkg = await import('@prisma/instrumentation');
+  const PrismaInstrumentation = prismaPkg?.PrismaInstrumentation || prismaPkg?.default?.PrismaInstrumentation;
+  if (PrismaInstrumentation) {
+    try { instrumentations.push(new PrismaInstrumentation()); }
+    catch (e) { console.warn('OTel: prisma instrumentation init failed:', e?.message || String(e)); }
+  }
+} catch (e) {
+  console.warn('OTEL Prisma instrumentation skipped:', e?.message || String(e));
+}
 
-const sdk = new NodeSDK({
-  resource: new Resource({ [SemanticResourceAttributes.SERVICE_NAME]: serviceName }),
-  traceExporter,
-  instrumentations: [getNodeAutoInstrumentations()],
-});
+instrumentations.push(getNodeAutoInstrumentations());
 
-sdk.start().catch((err) => {
-  console.error('OTel start error', err);
-});
+try {
+  registerInstrumentations({ instrumentations });
+} catch (e) {
+  console.warn('OTel: registerInstrumentations failed:', e?.message || String(e));
+}
 
-process.on('SIGTERM', async () => {
-  try { await sdk.shutdown(); } catch (e) {}
-  process.exit(0);
-});
-
+try {
+  const sdk = new NodeSDK({
+    resource: new Resource({ [SemanticResourceAttributes.SERVICE_NAME]: serviceName }),
+    traceExporter,
+    instrumentations,
+  });
+  sdk.start().catch((err) => { console.error('OTel start error', err); });
+  process.on('SIGTERM', async () => { try { await sdk.shutdown(); } catch {} process.exit(0); });
+  process.on('SIGINT', async () => { try { await sdk.shutdown(); } catch {} process.exit(0); });
+} catch (e) {
+  console.warn('OTel disabled:', e?.message || String(e));
+}
