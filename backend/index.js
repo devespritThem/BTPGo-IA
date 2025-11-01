@@ -1,4 +1,4 @@
-import './otel.js';
+try { await import('./otel.js'); } catch (e) { try { console.warn('OTel disabled:', e?.message || String(e)); } catch {} }
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
