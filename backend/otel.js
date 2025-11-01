@@ -1,47 +1,57 @@
+/**
+ * backend/otel.js
+ * Safe OpenTelemetry instrumentation loader compatible with ESM + CommonJS
+ */
+
+import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
 
-const serviceName = process.env.OTEL_SERVICE_NAME || 'btpgo-backend';
-const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN);
 
-const traceExporter = new OTLPTraceExporter({
-  url: `${otlpEndpoint.replace(/\/$/, '')}/v1/traces`,
-});
+async function initTelemetry() {
+  const serviceName = process.env.OTEL_SERVICE_NAME || 'btpgo-backend';
+  const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
 
-// Try to include Prisma instrumentation without crashing if unavailable
-let instrumentations = [];
-try {
-  const prismaPkg = await import('@prisma/instrumentation');
-  const PrismaInstrumentation = prismaPkg?.PrismaInstrumentation || prismaPkg?.default?.PrismaInstrumentation;
-  if (PrismaInstrumentation) {
-    try { instrumentations.push(new PrismaInstrumentation()); }
-    catch (e) { console.warn('OTel: prisma instrumentation init failed:', e?.message || String(e)); }
+  // Compatible import for prisma/instrumentation (CommonJS) with tolerance
+  let PrismaInstrumentation;
+  try {
+    const pkg = await import('@prisma/instrumentation');
+    PrismaInstrumentation = pkg?.PrismaInstrumentation || pkg?.default?.PrismaInstrumentation;
+  } catch (err) {
+    try { console.warn('OTEL Prisma instrumentation skipped:', err.message); } catch {}
   }
-} catch (e) {
-  console.warn('OTEL Prisma instrumentation skipped:', e?.message || String(e));
+  const instrumentations = (
+    [
+      getNodeAutoInstrumentations(),
+      PrismaInstrumentation ? new PrismaInstrumentation() : null,
+    ]
+      .filter(Boolean)
+  );
+
+  try {
+    registerInstrumentations({ instrumentations });
+  } catch (e) {
+    try { console.warn('OTEL registerInstrumentations skipped:', e?.message || String(e)); } catch {}
+  }
+
+  try {
+    const sdk = new NodeSDK({
+      resource: new Resource({ [SemanticResourceAttributes.SERVICE_NAME]: serviceName }),
+      traceExporter: new OTLPTraceExporter({ url: `${otlpEndpoint.replace(/\/$/, '')}/v1/traces` }),
+      instrumentations,
+    });
+    await sdk.start();
+    try { console.log('OTEL Telemetry initialized successfully'); } catch {}
+    process.on('SIGTERM', async () => { try { await sdk.shutdown(); } catch {} process.exit(0); });
+    process.on('SIGINT', async () => { try { await sdk.shutdown(); } catch {} process.exit(0); });
+  } catch (e) {
+    try { console.warn('OTEL Telemetry initialization failed:', e.message); } catch {}
+  }
 }
 
-instrumentations.push(getNodeAutoInstrumentations());
-
-try {
-  registerInstrumentations({ instrumentations });
-} catch (e) {
-  console.warn('OTel: registerInstrumentations failed:', e?.message || String(e));
-}
-
-try {
-  const sdk = new NodeSDK({
-    resource: new Resource({ [SemanticResourceAttributes.SERVICE_NAME]: serviceName }),
-    traceExporter,
-    instrumentations,
-  });
-  sdk.start().catch((err) => { console.error('OTel start error', err); });
-  process.on('SIGTERM', async () => { try { await sdk.shutdown(); } catch {} process.exit(0); });
-  process.on('SIGINT', async () => { try { await sdk.shutdown(); } catch {} process.exit(0); });
-} catch (e) {
-  console.warn('OTel disabled:', e?.message || String(e));
-}
+await initTelemetry();
