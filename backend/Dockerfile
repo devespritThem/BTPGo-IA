@@ -34,6 +34,6 @@ COPY ./backend ./
 COPY ./backend/prisma ./prisma
 
 # Lancement
-EXPOSE 4000
 RUN dos2unix entrypoint.sh && chmod 755 entrypoint.sh
+EXPOSE 4000
 ENTRYPOINT ["./entrypoint.sh"]
