@@ -25,5 +25,5 @@ RUN npx prisma generate
 # ========= Étape 2 : Exécution =========
 EXPOSE 4000
 
-# Lancement via script d’entrée tolérant (migrations non bloquantes)
-ENTRYPOINT "./entrypoint.sh"
+# Lancement via npm start
+CMD ["npm", "start"]
