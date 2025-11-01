@@ -70,3 +70,11 @@ jobs:
           echo " Docker Build   : OK"
           echo " Fly.io Health  : $(curl -s -o /dev/null -w '%http_code' https://btpgo-backend.fly.dev/health)"
           echo "------------------------------------------------"
+
+      - name:  Rapport Markdown
+        run: |
+          echo " ✅ Rapport Diagnostic BTPGo Backend" >> $GITHUB_STEP_SUMMARY
+          echo "- Server : btpgo-backend.fly.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Health : $(curl -s -o /dev/null -w '%http_code' https://btpgo-backend.fly.dev/health)" >> $GITHUB_STEP_SUMMARY
+          echo "- Prisma Client : OK" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker Build : OK" >> $GITHUB_STEP_SUMMARY
