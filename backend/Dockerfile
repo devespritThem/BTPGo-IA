@@ -2,7 +2,7 @@
 # 🚀 BTPGo Backend - Dockerfile compatible Fly.io + Prisma
 # =========================================================
 
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 WORKDIR /app
 
 # ---- DEPS ----
@@ -13,14 +13,12 @@ COPY prisma ./prisma
 RUN npx prisma generate || true
 
 # ---- RUNTIME ----
-FROM node:20-alpine AS runtime
+FROM node:20-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 
-# ✅ Fix OpenSSL + Prisma on musl
-RUN apk add --no-cache openssl dos2unix
-ENV PRISMA_CLI_BINARY_TARGETS="linux-musl"
-ENV LD_LIBRARY_PATH="/lib:/usr/lib"
+# Install OpenSSL and utils (Debian/Ubuntu)
+RUN apt-get update && apt-get install -y openssl dos2unix && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 RUN npm ci --omit=dev || npm install --omit=dev && npm install prisma@^5.22.0 --no-save
