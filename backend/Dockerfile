@@ -18,7 +18,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # Install OpenSSL + dos2unix (for Prisma)
-RUN apk add --no-cache openssl1.1-compat libstdc++ dos2unix
+RUN apk add --no-cache openssl libssl3 libstdc++ dos2unix
 
 COPY package*.json ./
 RUN npm ci --omit=dev || npm install --omit=dev && npm install prisma@^5.22.0 --no-save
