@@ -8,6 +8,7 @@ primary_region = "cdg"
 [env]
   PORT = "4000"
   NODE_ENV = "production"
+  HEALTH_SKIP_DB = "true"
 
 # ✅ On retire temporairement le release_command bloquant
 # [deploy]
