@@ -4,10 +4,8 @@ set -euo pipefail
 if [ "${MIGRATE_ON_START:-true}" = "true" ]; then
   echo "[entrypoint] Running Prisma migrations..."
   npx prisma generate >/dev/null 2>&1 || true
-  npx prisma migrate deploy || {
-    echo "[entrypoint] migrate deploy failed; attempting dev migration (dev only)";
-    npx prisma migrate dev --name init || true;
-  }
+  # Tolerate database unavailability at boot (do not crash container)
+  npx prisma migrate deploy || echo "[entrypoint] WARN Prisma migrate failed, continuing..."
 else
   echo "[entrypoint] Skipping migrations (MIGRATE_ON_START=false)"
 fi
