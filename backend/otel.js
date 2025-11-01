@@ -18,10 +18,13 @@ async function initTelemetry() {
   const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
 
   // Compatible import for prisma/instrumentation (CommonJS) with tolerance
-  let PrismaInstrumentation;
+  let PrismaInstrumentation = null;
   try {
-    const pkg = await import('@prisma/instrumentation');
-    PrismaInstrumentation = pkg?.PrismaInstrumentation || pkg?.default?.PrismaInstrumentation;
+    const mod = await import('@prisma/instrumentation');
+    PrismaInstrumentation = mod?.PrismaInstrumentation || mod?.default?.PrismaInstrumentation;
+    if (PrismaInstrumentation) {
+      try { console.log('OTEL Prisma instrumentation loaded'); } catch {}
+    }
   } catch (err) {
     try { console.warn('OTEL Prisma instrumentation skipped:', err.message); } catch {}
   }
