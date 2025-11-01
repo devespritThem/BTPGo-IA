@@ -13,7 +13,7 @@ COPY ./backend/package*.json ./
 RUN npm ci || npm install
 
 # Étape 2 : génération du client Prisma
-COPY ./backend/prisma ./prisma
+COPY ./prisma ./prisma
 RUN npx prisma generate || true
 
 # Étape 3 : runtime final
@@ -30,8 +30,8 @@ RUN npm ci --omit=dev || npm install --omit=dev \
 # Copie du code et des fichiers Prisma
 COPY --from=deps /app/node_modules/@prisma /app/node_modules/@prisma
 COPY --from=deps /app/node_modules/.prisma /app/node_modules/.prisma
-COPY ./backend ./
-COPY ./backend/prisma ./prisma
+COPY . .
+COPY ./prisma ./prisma
 
 # Lancement
 RUN dos2unix entrypoint.sh && chmod 755 entrypoint.sh
