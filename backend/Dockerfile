@@ -3,37 +3,35 @@
 # =========================================================
 
 FROM node:20-alpine AS base
-# cache-bust label to force rebuild when needed
 LABEL org.opencontainers.image.description="BTPGo backend image"
 WORKDIR /app
 
-# Étape 1 : installation des dépendances
+# ---- DEPS ----
 FROM base AS deps
-COPY ./backend/package*.json ./
+COPY package*.json ./
 RUN npm ci || npm install
-
-# Étape 2 : génération du client Prisma
-COPY ./prisma ./prisma
+# Prisma schema pour génération du client
+COPY prisma ./prisma
 RUN npx prisma generate || true
 
-# Étape 3 : runtime final
+# ---- RUNTIME ----
 FROM node:20-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
-RUN apk add --no-cache dos2unix
 
-# Copie des fichiers essentiels
-COPY ./backend/package*.json ./
-RUN npm ci --omit=dev || npm install --omit=dev \
- && npm install prisma@^5.22.0 --no-save
+# Installation minimale + Prisma CLI
+COPY package*.json ./
+RUN npm ci --omit=dev || npm install --omit=dev && npm install prisma@^5.22.0 --no-save
 
-# Copie du code et des fichiers Prisma
-COPY --from=deps /app/node_modules/@prisma /app/node_modules/@prisma
+# Copie des dépendances Prisma depuis deps
+COPY --from=deps /app/node_modules/prisma /app/node_modules/prisma
 COPY --from=deps /app/node_modules/.prisma /app/node_modules/.prisma
-COPY . .
-COPY ./prisma ./prisma
 
-# Lancement
-RUN dos2unix entrypoint.sh && chmod 755 entrypoint.sh
+# Copie du code applicatif
+COPY . .
+
+# Rend le script d’entrée exécutable
+RUN apk add --no-cache dos2unix && dos2unix entrypoint.sh && chmod 755 entrypoint.sh
+
 EXPOSE 4000
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT "./entrypoint.sh"
