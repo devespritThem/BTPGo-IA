@@ -1,5 +1,5 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 if [ "${MIGRATE_ON_START:-true}" = "true" ]; then
   echo "[entrypoint] Running Prisma migrations..."
