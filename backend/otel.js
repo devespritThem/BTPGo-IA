@@ -52,8 +52,8 @@ async function initTelemetry() {
     try { console.log('OTEL Telemetry initialized successfully'); } catch {}
     process.on('SIGTERM', async () => { try { await sdk.shutdown(); } catch {} process.exit(0); });
     process.on('SIGINT', async () => { try { await sdk.shutdown(); } catch {} process.exit(0); });
-  } catch (e) {
-    try { console.warn('OTEL Telemetry initialization failed:', e.message); } catch {}
+  } catch (err) {
+    try { console.warn('OTEL Telemetry initialization failed:', err.message); } catch {}
   }
 }
 
