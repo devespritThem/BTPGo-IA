@@ -22,5 +22,5 @@ RUN npx prisma generate
 
 EXPOSE 4000
 
-# Lancer le serveur Express
-CMD ["node", "index.js"]
+# Lancer le serveur Express (via npm start)
+CMD ["npm", "start"]
