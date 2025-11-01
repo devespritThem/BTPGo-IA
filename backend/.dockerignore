@@ -1,13 +1,22 @@
+# Node / React
 node_modules
 npm-debug.log
-Dockerfile*
-.dockerignore
-.git
-.gitignore
-dist
-.env
-.env.local
-*.tsbuildinfo
-coverage
-tmp
-prisma/dev.db
+**/node_modules
+**/dist
+**/.env
+**/.env.local
+**/fly.toml
+**/Dockerfile
+**/.git
+**/.github
+**/.vscode
+**/__pycache__
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+logs/
