@@ -10,6 +10,9 @@ primary_region = "cdg"
   NODE_ENV = "production"
   HEALTH_SKIP_DB = "true"
 
+[deploy]
+  release_command = "sh -lc 'npx prisma migrate deploy'"
+
 # ✅ On retire temporairement le release_command bloquant
 # [deploy]
 #   release_command = "sh -lc 'npx prisma migrate deploy'"
