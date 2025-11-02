@@ -1,9 +1,20 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { clearToken, getOrgId, setOrgId } from '../lib/auth.js'
+import { clearToken, getOrgId, setOrgId, getToken } from '../lib/auth.js'
+import { apiFetch } from '../lib/api.js'
 
 export default function Layout() {
   const navigate = useNavigate()
   const orgId = getOrgId()
+  async function showMe() {
+    try {
+      const token = getToken();
+      if (!token) return alert('Non connecté');
+      const me = await apiFetch('/auth/me', { token })
+      alert(`Connecté: ${me.user.email}`)
+    } catch (e) {
+      alert('Impossible de récupérer le profil')
+    }
+  }
 
   function logout() {
     clearToken()
@@ -32,6 +43,7 @@ export default function Layout() {
           <div className="ml-auto flex items-center gap-2 text-sm">
             <label className="text-gray-500">Org ID</label>
             <input defaultValue={orgId} onChange={onOrgChange} placeholder="auto" className="border rounded px-2 py-1 text-sm" />
+            <button onClick={showMe} className="bg-blue-50 px-3 py-1 rounded text-blue-700 hover:bg-blue-100">Mon compte</button>
             <button onClick={logout} className="bg-gray-100 px-3 py-1 rounded text-gray-700 hover:bg-gray-200">Logout</button>
           </div>
         </div>

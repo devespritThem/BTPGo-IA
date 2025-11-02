@@ -1,0 +1,48 @@
+name: Purge Cloudflare Cache (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Purge mode (everything or urls)'
+        required: false
+        default: 'everything'
+      urls:
+        description: 'Comma-separated URLs to purge (when mode=urls)'
+        required: false
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge cache
+        env:
+          CF_ZONE: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MODE: ${{ github.event.inputs.mode }}
+          URLS: ${{ github.event.inputs.urls }}
+        run: |
+          if [ -z "$CF_ZONE" ] || [ -z "$CF_TOKEN" ]; then
+            echo "Cloudflare secrets not configured"; exit 1;
+          fi
+          if [ "$MODE" = "urls" ] && [ -n "$URLS" ]; then
+            list=$(python3 - <<PY
+import json,os
+urls=[u.strip() for u in os.environ.get('URLS','').split(',') if u.strip()]
+print(json.dumps({'files': urls}))
+PY
+)
+            echo "Purging specific URLs: $URLS"
+            curl -fsSL -X POST \
+              -H "Authorization: Bearer $CF_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "$list" \
+              "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/purge_cache"
+          else
+            echo "Purging everything"
+            curl -fsSL -X POST \
+              -H "Authorization: Bearer $CF_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data '{"purge_everything":true}' \
+              "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/purge_cache"
+          fi

@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Login from './pages/Login.jsx'
+import Register from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Billing from './pages/Billing.jsx'
 import OrgMembers from './pages/OrgMembers.jsx'
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         <Route path="/" element={<ProtectedRoute><App /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
