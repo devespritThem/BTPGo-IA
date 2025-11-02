@@ -28,7 +28,7 @@ jobs:
           npm ci || npm install
           npm run build
 
-      - name: Deploy dist via SFTP
+      - name: Deploy dist via SFTP/FTP
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
           server: ${{ secrets.SFTP_HOST }}
@@ -37,5 +37,5 @@ jobs:
           port: ${{ secrets.SFTP_PORT || 22 }}
           local_path: 'frontend/dist/*'
           remote_path: ${{ secrets.SFTP_REMOTE_PATH }}
-          sftp_only: true
+          sftp_only: false
 
