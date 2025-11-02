@@ -1,0 +1,41 @@
+name: Build Frontend Zip
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build_zip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build Frontend
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ secrets.BACKEND_URL_PROD }}
+        run: |
+          npm ci || npm install
+          npm run build
+
+      - name: Create zip artifact
+        run: |
+          cd frontend
+          zip -r ../frontend-dist.zip dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist.zip
+          retention-days: 7
+
