@@ -12,7 +12,7 @@ jobs:
       FLY_BACKEND_APP: ${{ secrets.FLY_BACKEND_APP || 'btpgo-api' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@v1
