@@ -40,4 +40,17 @@ jobs:
           server-dir: ${{ secrets.SFTP_REMOTE_PATH }}/
           timeout: 600000
           state-name: .ftp-deploy-sync-state.json
+          dangerous-clean-slate: true
+
+      - name: Purge Cloudflare cache (optional)
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ZONE_ID != '' }}
+        env:
+          CF_ZONE: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}' \
+            "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/purge_cache"
 
