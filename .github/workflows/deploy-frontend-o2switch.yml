@@ -37,7 +37,7 @@ jobs:
           protocol: ftps
           port: ${{ secrets.SFTP_PORT || 21 }}
           local-dir: frontend/dist/
-          server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
+          server-dir: ${{ secrets.SFTP_REMOTE_PATH }}/
           timeout: 600000
           state-name: .ftp-deploy-sync-state.json
 
