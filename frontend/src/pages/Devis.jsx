@@ -31,9 +31,19 @@ export default function Devis() {
     } catch (e) { setErr(e.message); notify(e.message, 'error') }
   }
 
+  async function createDemo() {
+    try {
+      await apiFetch('/demo/create/devis', { method: 'POST', token })
+      notify('Devis de démo ajouté', 'success'); load()
+    } catch (e) { notify('Échec démo', 'error') }
+  }
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Devis</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Devis</h1>
+        <button onClick={createDemo} className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Créer un exemple</button>
+      </div>
       {err && <p className="text-red-600 mb-2">{String(err)}</p>}
       <div className="bg-white rounded shadow p-4 mb-4 max-w-xl flex items-center gap-2">
         <input value={ref} onChange={e=>setRef(e.target.value)} placeholder="Référence" className="border rounded px-2 py-1" />
@@ -44,15 +54,22 @@ export default function Devis() {
         </select>
         <button onClick={create} className="bg-blue-600 text-white px-3 py-1 rounded">Créer</button>
       </div>
-      {loading ? <div className="bg-white rounded shadow p-4 flex items-center gap-2"><Spinner /><span>Chargement…</span></div> : (
-      <ul className="bg-white rounded shadow divide-y">
-        {items.map(m => (
-          <li key={m.id} className="p-3">
-            <div className="font-medium">{m.ref} <span className="text-xs text-gray-500">[{m.status}]</span></div>
-            <div className="text-sm text-gray-600">{m.amount} €</div>
-          </li>
-        ))}
-      </ul>
+      {loading ? (
+        <div className="bg-white rounded shadow p-4 flex items-center gap-2"><Spinner /><span>Chargement…</span></div>
+      ) : items.length === 0 ? (
+        <div className="bg-white rounded shadow p-6 text-center">
+          <p className="text-gray-600 mb-3">Aucun devis pour le moment.</p>
+          <a href="/demo" className="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Remplir la démo</a>
+        </div>
+      ) : (
+        <ul className="bg-white rounded shadow divide-y">
+          {items.map(m => (
+            <li key={m.id} className="p-3">
+              <div className="font-medium">{m.ref} <span className="text-xs text-gray-500">[{m.status}]</span></div>
+              <div className="text-sm text-gray-600">{m.amount} €</div>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )

@@ -1,5 +1,5 @@
 # fly.toml app configuration file for BTPGo backend (API)
-app = "btpgo-backend"
+app = "btpgo-ia"
 primary_region = "cdg"
 
 [build]

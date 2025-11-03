@@ -11,7 +11,7 @@ docker compose --profile monitoring up -d
 ```
 
 - Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000 (admin/admin par défaut; changez le mot de passe)
+- Grafana: http://localhost:3001 (admin/admin par défaut; changez le mot de passe)
 
 ## Cibles et métriques
 

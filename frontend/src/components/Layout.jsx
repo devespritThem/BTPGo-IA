@@ -39,6 +39,7 @@ export default function Layout() {
             <NavLink to="/chantiers" className={navLink}>Chantiers</NavLink>
             <NavLink to="/billing" className={navLink}>Facturation</NavLink>
             <NavLink to="/org/members" className={navLink}>Membres</NavLink>
+            <NavLink to="/demo" className={navLink}>Démo</NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-2 text-sm">
             <label className="text-gray-500">Org ID</label>

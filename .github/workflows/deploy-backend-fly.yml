@@ -22,7 +22,7 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           INPUT_APP: ${{ env.FLY_BACKEND_APP }}
-          FALLBACK_APP: btpgo-backend
+          FALLBACK_APP: btpgo-ia
           FLY_ORG: ${{ secrets.FLY_ORG || secrets.FLY_ORG_SLUG }}
           RUN_ID: ${{ github.run_id }}
         run: |
@@ -81,10 +81,10 @@ jobs:
           flyctl deploy --remote-only --config fly.toml --app "$FLY_BACKEND_APP"
 
       - name: Wait for health
-        if: ${{ secrets.BACKEND_URL_FLY != '' }}
         env:
           URL: ${{ secrets.BACKEND_URL_FLY }}
         run: |
+          if [ -z "$URL" ]; then echo "Skipping health check (BACKEND_URL_FLY not set)"; exit 0; fi
           for i in {1..60}; do
             if curl -sf "$URL/health" >/dev/null; then echo "healthy"; exit 0; fi
             sleep 2;
@@ -92,10 +92,10 @@ jobs:
           echo "Backend not healthy at $URL/health"; exit 1
 
       - name: DB health check
-        if: ${{ secrets.BACKEND_URL_FLY != '' }}
         env:
           URL: ${{ secrets.BACKEND_URL_FLY }}
         run: |
+          if [ -z "$URL" ]; then echo "Skipping DB health (BACKEND_URL_FLY not set)"; exit 0; fi
           for i in {1..60}; do
             if curl -sf "$URL/health?db=1" >/dev/null; then echo "db healthy"; exit 0; fi
             sleep 2;
@@ -103,10 +103,10 @@ jobs:
           echo "DB not reachable at $URL/health?db=1"; exit 1
 
       - name: Smoke test
-        if: ${{ secrets.BACKEND_URL_FLY != '' }}
         working-directory: backend
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL_FLY }}
         run: |
+          if [ -z "$BACKEND_URL" ]; then echo "Skipping smoke test (BACKEND_URL_FLY not set)"; exit 0; fi
           npm ci --omit=dev || npm install --omit=dev
           node scripts/smoke.js

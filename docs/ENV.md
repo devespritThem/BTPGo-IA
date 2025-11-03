@@ -3,7 +3,8 @@ Variables d’environnement
 Backend
 - DATABASE_URL: URL Postgres (ex: postgresql://postgres:postgres@localhost:5432/btpgo?schema=public)
 - JWT_SECRET: secret JWT
-- PORT: port API (par défaut 3000)
+- PORT: port API (par défaut 4000)
+- HOST: hôte d'écoute (par défaut 0.0.0.0; mettre :: pour IPv6‑only)
 - AI_ENGINE_URL: URL du service IA (par défaut http://localhost:8000)
 - STORAGE_DIR: dossier de stockage fichiers versionnés (par défaut storage)
 - ACCESS_TTL: durée access token (ex: 15m)

@@ -9,7 +9,7 @@ AI Engine
 - Endpoint Prometheus: `/metrics`
 
 Compose/Infra
-- Prometheus scrapes backend:3000, ai_engine:8000 (`infra/prometheus.yml`)
+- Prometheus scrapes backend:4000, ai_engine:8000 (`infra/prometheus.yml`)
 - Grafana sur http://localhost:3001 (ajouter Prometheus datasource)
 
 CI/CD
