@@ -5,7 +5,8 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # Installer les libs nécessaires à Prisma et au runtime
-RUN apk add --no-cache openssl libssl3 libstdc++ dos2unix
+# Certificats CA requis pour les connexions TLS (ex: Supabase/Postgres)
+RUN apk add --no-cache ca-certificates openssl libssl3 libstdc++ dos2unix
 
 # Copier les fichiers backend depuis la racine
 COPY ./backend/package*.json ./
@@ -22,5 +23,8 @@ RUN npx prisma generate
 
 EXPOSE 4000
 
-# Lancer le serveur Express (via npm start)
+# Utiliser un entrypoint tolérant aux erreurs pour migrations/seed
+ENTRYPOINT ["./entrypoint.sh"]
+
+# Lancer le serveur Express
 CMD ["node", "index.js"]

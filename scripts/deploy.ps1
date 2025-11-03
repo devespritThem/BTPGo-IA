@@ -10,7 +10,8 @@ if ($BackendFly) {
     Write-Host "[deploy] flyctl not found. Install Fly.io CLI first."; exit 1
   }
   Push-Location $Root
-  flyctl deploy --remote-only --config infra/fly.toml
+  # Déploie avec la config racine
+  flyctl deploy --remote-only --config fly.toml
   Pop-Location
 }
 

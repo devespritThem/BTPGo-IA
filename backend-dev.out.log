@@ -1,0 +1,26 @@
+
+> btpgo-backend@1.0.0 dev
+> node --watch index.js
+
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'
+Server listening on 0.0.0.0:4000
+Restarting 'index.js'

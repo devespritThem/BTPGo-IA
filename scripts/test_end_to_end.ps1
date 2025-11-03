@@ -1,5 +1,7 @@
 Param(
-  [string]$BaseUrl = 'http://localhost:3000'
+  # API backend direct (dev): http://localhost:4000
+  # Via Nginx: http://localhost:8080/api
+  [string]$BaseUrl = 'http://localhost:4000'
 )
 
 $ErrorActionPreference = 'Stop'

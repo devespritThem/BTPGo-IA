@@ -42,7 +42,7 @@ Scripts PowerShell (Windows)
 - Build Docker + Up: `pwsh scripts/btpgo_auto_build.ps1 -Detach`
 - DB: `pwsh scripts/db.ps1 -Cmd migrate|deploy|seed|studio`
 - Deploy: `pwsh scripts/deploy_backend_fly.ps1` et `pwsh scripts/deploy_front_sftp.ps1`
-- E2E: `pwsh scripts/test_end_to_end.ps1 -BaseUrl http://localhost:3000`
+- E2E: `pwsh scripts/test_end_to_end.ps1 -BaseUrl http://localhost:4000`
 
 Commandes Docker utiles
 - Base: `docker compose -f infra/docker-compose.yml up -d db`

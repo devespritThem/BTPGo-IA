@@ -11,7 +11,16 @@ Steps
 3) Démarrer Postgres (option Docker): `docker compose -f infra/docker-compose.yml up -d db`
 4) Backend
    - `cd backend && npm ci && npx prisma migrate dev && npm run dev`
-   - Health: `http://localhost:3000/health`
+    - Health: `http://localhost:4000/health` (backend direct)
+    - Ou via Nginx: `http://localhost:8080/api/health`
+
+IPv6‑only (machines sans IPv4)
+- Activez IPv6 dans Docker Desktop (daemon JSON: "ipv6": true, "fixed-cidr-v6": ...), puis redémarrez Docker.
+- Le reverse proxy Nginx écoute aussi en IPv6 (`listen [::]:80;`).
+- Pour binder l’API en IPv6, définissez `HOST=::` (par défaut `0.0.0.0`).
+- Exemples:
+  - Backend direct: `http://[::1]:4000/health`
+  - Via Nginx: `http://[::1]:8080/api/health`
 5) AI Engine
    - `cd ai_engine && pip install -r requirements.txt && uvicorn app.main:app --reload`
    - Health: `http://localhost:8000/health`

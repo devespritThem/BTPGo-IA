@@ -59,4 +59,4 @@ deploy_front_sftp.ps1
 
 test_end_to_end.ps1
 - Test d’intégration: health → register-org → project → finance → messages → analytics
-- Usage: `pwsh scripts/test_end_to_end.ps1 -BaseUrl http://localhost:3000`
+- Usage: `pwsh scripts/test_end_to_end.ps1 -BaseUrl http://localhost:4000`
