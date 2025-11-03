@@ -9,7 +9,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      FLY_BACKEND_APP: ${{ secrets.FLY_BACKEND_APP || 'btpgo-api' }}
+      # Aligne par défaut sur le nom d'app du fly.toml racine
+      FLY_BACKEND_APP: ${{ secrets.FLY_BACKEND_APP || 'btpgo-backend' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,7 +19,7 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@v1
 
       - name: Set secrets on Fly
-        if: ${{ secrets.FLY_API_TOKEN != '' }}
+        if: ${{ env.FLY_API_TOKEN != '' }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -29,6 +30,9 @@ jobs:
           CORS_ALLOWED_METHODS: ${{ secrets.CORS_ALLOWED_METHODS }}
           CORS_ALLOWED_HEADERS: ${{ secrets.CORS_ALLOWED_HEADERS }}
           CORS_EXPOSED_HEADERS: ${{ secrets.CORS_EXPOSED_HEADERS }}
+          AI_ENGINE_URL: ${{ secrets.AI_ENGINE_URL }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
         run: |
           ARGS=()
           [ -n "$DATABASE_URL" ] && ARGS+=(DATABASE_URL="$DATABASE_URL")
@@ -39,17 +43,20 @@ jobs:
           [ -n "$CORS_ALLOWED_METHODS" ] && ARGS+=(CORS_ALLOWED_METHODS="$CORS_ALLOWED_METHODS")
           [ -n "$CORS_ALLOWED_HEADERS" ] && ARGS+=(CORS_ALLOWED_HEADERS="$CORS_ALLOWED_HEADERS")
           [ -n "$CORS_EXPOSED_HEADERS" ] && ARGS+=(CORS_EXPOSED_HEADERS="$CORS_EXPOSED_HEADERS")
+          [ -n "$AI_ENGINE_URL" ] && ARGS+=(AI_ENGINE_URL="$AI_ENGINE_URL")
+          [ -n "$OTEL_EXPORTER_OTLP_ENDPOINT" ] && ARGS+=(OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT")
+          [ -n "$OTEL_SERVICE_NAME" ] && ARGS+=(OTEL_SERVICE_NAME="$OTEL_SERVICE_NAME")
           if [ ${#ARGS[@]} -eq 0 ]; then echo "No secrets to set"; exit 0; fi
-          flyctl secrets set "${ARGS[@]}" --app "${{ env.FLY_BACKEND_APP }}"
+          flyctl secrets set "${ARGS[@]}" --app btpgo-backend
 
       - name: Deploy Backend (root fly.toml)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl deploy --remote-only --config fly.toml --app "${{ env.FLY_BACKEND_APP }}"
+          flyctl deploy --remote-only --config fly.toml --app btpgo-backend
 
       - name: Wait for health
-        if: ${{ secrets.BACKEND_URL_FLY != '' }}
+        if: ${{ env.URL != '' }}
         env:
           URL: ${{ secrets.BACKEND_URL_FLY }}
         run: |
@@ -59,8 +66,19 @@ jobs:
           done
           echo "Backend not healthy at $URL/health"; exit 1
 
+      - name: DB health check
+        if: ${{ env.URL != '' }}
+        env:
+          URL: ${{ secrets.BACKEND_URL_FLY }}
+        run: |
+          for i in {1..60}; do
+            if curl -sf "$URL/health?db=1" >/dev/null; then echo "db healthy"; exit 0; fi
+            sleep 2;
+          done
+          echo "DB not reachable at $URL/health?db=1"; exit 1
+
       - name: Smoke test
-        if: ${{ secrets.BACKEND_URL_FLY != '' }}
+        if: ${{ env.BACKEND_URL != '' }}
         working-directory: backend
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL_FLY }}

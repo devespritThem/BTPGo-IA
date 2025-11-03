@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   workflow_call:
 
+permissions:
+  issues: write
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -19,6 +22,18 @@ jobs:
             sleep 2;
           done
           echo "Backend not healthy"; exit 1
+
+      - name: Check backend DB connectivity
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL_PROD }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then echo "BACKEND_URL_PROD secret missing"; exit 1; fi
+          echo "Checking $BACKEND_URL/health?db=1"
+          for i in {1..10}; do
+            if curl -sf "$BACKEND_URL/health?db=1"; then exit 0; fi
+            sleep 2;
+          done
+          echo "Backend DB not reachable"; exit 1
 
       - name: Check backend metrics
         if: ${{ success() }}
@@ -61,3 +76,46 @@ jobs:
           curl -sSf "$FRONTEND_URL" -o index.html
           test -s index.html
           head -n 5 index.html || true
+
+      - name: Check frontend deep links (HashRouter)
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL_PROD }}
+        run: |
+          if [ -z "$FRONTEND_URL" ]; then echo "FRONTEND_URL_PROD secret missing"; exit 1; fi
+          echo "Checking deep links /login and /demo"
+          for path in '//login' '//demo'; do
+            url="$FRONTEND_URL$path"
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            echo "$url -> $code"
+            if [ "$code" != "200" ]; then
+              echo "Deep link $url did not return 200"; exit 1;
+            fi
+          done
+
+  report:
+    needs: smoke
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create issue on health check failure
+        uses: actions/github-script@v7
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL_PROD }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { context, github } = require('@actions/github');
+            const { owner, repo } = context.repo;
+            const title = `Prod health check failed: run ${context.runId}`;
+            const lines = [];
+            lines.push(`Workflow: ${context.workflow}`);
+            lines.push(`Run: https://github.com/${owner}/${repo}/actions/runs/${context.runId}`);
+            lines.push(`Backend URL: ${process.env.BACKEND_URL || 'unknown'}`);
+            lines.push(`Time: ${new Date().toISOString()}`);
+            lines.push('');
+            lines.push('The daily production health check failed (including DB connectivity).');
+            lines.push('Inspect the run logs for /health and /health?db=1 details.');
+            const body = lines.join('\n');
+            await github.rest.issues.create({ owner, repo, title, body, labels: ['health-check','bug'] });

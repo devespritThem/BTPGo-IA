@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0; url=/#/demo">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirection vers /#/demo</title>
+    <script>
+      (function(){
+        try {
+          var qs = location.search || '';
+          var hash = '/#/demo';
+          var target = hash + (qs || '');
+          location.replace(target);
+        } catch (_) {
+          location.href = '/#/demo';
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    Redirection vers <a href="/#/demo">/#/demo</a>...
+  </body>
+</html>
+
