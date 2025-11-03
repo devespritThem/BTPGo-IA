@@ -47,13 +47,13 @@ jobs:
           [ -n "$OTEL_EXPORTER_OTLP_ENDPOINT" ] && ARGS+=(OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT")
           [ -n "$OTEL_SERVICE_NAME" ] && ARGS+=(OTEL_SERVICE_NAME="$OTEL_SERVICE_NAME")
           if [ ${#ARGS[@]} -eq 0 ]; then echo "No secrets to set"; exit 0; fi
-          flyctl secrets set "${ARGS[@]}" --app "${{ env.FLY_BACKEND_APP }}"
+          flyctl secrets set "${ARGS[@]}" --app btpgo-backend
 
       - name: Deploy Backend (root fly.toml)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl deploy --remote-only --config fly.toml --app "${{ env.FLY_BACKEND_APP }}"
+          flyctl deploy --remote-only --config fly.toml --app btpgo-backend
 
       - name: Wait for health
         if: ${{ env.URL != '' }}
