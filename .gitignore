@@ -27,3 +27,7 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Local dev logs
+*-dev.out.log
+*-dev.err.log
+
