@@ -9,8 +9,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      # Aligne par défaut sur le nom d'app du fly.toml racine
-      FLY_BACKEND_APP: ${{ secrets.FLY_BACKEND_APP || 'btpgo-backend' }}
+      # Optionnel: définissez FLY_BACKEND_APP dans les Secrets pour surcharger le nom
+      FLY_BACKEND_APP: ${{ secrets.FLY_BACKEND_APP || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,8 +18,31 @@ jobs:
       - name: Setup Flyctl
         uses: superfly/flyctl-actions/setup-flyctl@v1
 
+      - name: Resolve app name and ensure exists
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          INPUT_APP: ${{ env.FLY_BACKEND_APP }}
+          FALLBACK_APP: btpgo-backend
+          FLY_ORG: ${{ secrets.FLY_ORG || secrets.FLY_ORG_SLUG }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -e
+          APP="$INPUT_APP"; if [ -z "$APP" ]; then APP="$FALLBACK_APP"; fi
+          if flyctl apps show "$APP" >/dev/null 2>&1; then
+            echo "Using existing app: $APP"
+          else
+            echo "App $APP not found. Creating..."
+            if flyctl apps create "$APP" ${FLY_ORG:+--org "$FLY_ORG"}; then
+              echo "Created app: $APP"
+            else
+              APP="${FALLBACK_APP}-${RUN_ID}"
+              echo "Creating fallback app: $APP"
+              flyctl apps create "$APP" ${FLY_ORG:+--org "$FLY_ORG"}
+            fi
+          fi
+          echo "FLY_BACKEND_APP=$APP" >> "$GITHUB_ENV"
+
       - name: Set secrets on Fly
-        if: ${{ env.FLY_API_TOKEN != '' }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -34,6 +57,7 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
         run: |
+          set -e
           ARGS=()
           [ -n "$DATABASE_URL" ] && ARGS+=(DATABASE_URL="$DATABASE_URL")
           [ -n "$JWT_SECRET" ] && ARGS+=(JWT_SECRET="$JWT_SECRET")
@@ -47,16 +71,17 @@ jobs:
           [ -n "$OTEL_EXPORTER_OTLP_ENDPOINT" ] && ARGS+=(OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT")
           [ -n "$OTEL_SERVICE_NAME" ] && ARGS+=(OTEL_SERVICE_NAME="$OTEL_SERVICE_NAME")
           if [ ${#ARGS[@]} -eq 0 ]; then echo "No secrets to set"; exit 0; fi
-          flyctl secrets set "${ARGS[@]}" --app btpgo-backend
+          flyctl secrets set "${ARGS[@]}" --app "$FLY_BACKEND_APP"
 
       - name: Deploy Backend (root fly.toml)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          flyctl deploy --remote-only --config fly.toml --app btpgo-backend
+          set -e
+          flyctl deploy --remote-only --config fly.toml --app "$FLY_BACKEND_APP"
 
       - name: Wait for health
-        if: ${{ env.URL != '' }}
+        if: ${{ secrets.BACKEND_URL_FLY != '' }}
         env:
           URL: ${{ secrets.BACKEND_URL_FLY }}
         run: |
@@ -67,7 +92,7 @@ jobs:
           echo "Backend not healthy at $URL/health"; exit 1
 
       - name: DB health check
-        if: ${{ env.URL != '' }}
+        if: ${{ secrets.BACKEND_URL_FLY != '' }}
         env:
           URL: ${{ secrets.BACKEND_URL_FLY }}
         run: |
@@ -78,7 +103,7 @@ jobs:
           echo "DB not reachable at $URL/health?db=1"; exit 1
 
       - name: Smoke test
-        if: ${{ env.BACKEND_URL != '' }}
+        if: ${{ secrets.BACKEND_URL_FLY != '' }}
         working-directory: backend
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL_FLY }}
