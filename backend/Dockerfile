@@ -1,5 +1,5 @@
 # ---- Build image for backend ----
-FROM node:20-alpine
+FROM node:25-alpine
 
 ENV NODE_ENV=production
 WORKDIR /app
