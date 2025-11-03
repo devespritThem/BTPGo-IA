@@ -28,7 +28,49 @@ jobs:
           npm ci || npm install
           npm run build
 
-      - name: Deploy dist via FTPS (explicit)
+      - name: Ensure deep-link redirects exist (/login, /demo)
+        working-directory: frontend/dist
+        run: |
+          set -eu
+          mkdir -p login demo
+          cat > login/index.html << 'HTML'
+          <!doctype html>
+          <html lang="fr">
+            <head>
+              <meta charset="UTF-8" />
+              <meta http-equiv="refresh" content="0; url=/#/login">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>Redirection vers /#/login</title>
+              <script>
+                (function(){try{var qs=location.search||'';location.replace('/#/login'+(qs||''));}catch(_){location.href='/#/login';}})();
+              </script>
+            </head>
+            <body>Redirection vers <a href="/#/login">/#/login</a>...</body>
+          </html>
+          HTML
+          cat > demo/index.html << 'HTML'
+          <!doctype html>
+          <html lang="fr">
+            <head>
+              <meta charset="UTF-8" />
+              <meta http-equiv="refresh" content="0; url=/#/demo">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>Redirection vers /#/demo</title>
+              <script>
+                (function(){try{var qs=location.search||'';location.replace('/#/demo'+(qs||''));}catch(_){location.href='/#/demo';}})();
+              </script>
+            </head>
+            <body>Redirection vers <a href="/#/demo">/#/demo</a>...</body>
+          </html>
+          HTML
+          # Create minimal .htaccess fallback if missing
+          if [ ! -f .htaccess ]; then
+            printf '%s
+FallbackResource /index.html
+' "Options -Indexes -MultiViews" > .htaccess
+          fi
+
+      - name: Deploy dist via FTPS (explicit) to primary path
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.SFTP_HOST }}
@@ -41,6 +83,22 @@ jobs:
           timeout: 600000
           state-name: .ftp-deploy-sync-state.json
           dangerous-clean-slate: true
+
+      - name: Deploy dist via FTPS (explicit) to public_html fallback
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USERNAME }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          protocol: ftps
+          port: ${{ secrets.SFTP_PORT || 21 }}
+          local-dir: frontend/dist/
+          server-dir: public_html/
+          timeout: 600000
+          state-name: .ftp-deploy-sync-state-public_html.json
+          dangerous-clean-slate: false
 
       - name: Purge Cloudflare cache (optional)
         env:
@@ -57,4 +115,19 @@ jobs:
           else
             echo "Skipping Cloudflare purge (missing CF env vars)";
           fi
+
+      - name: Verify deep links (HashRouter)
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL_PROD }}
+        run: |
+          if [ -z "$FRONTEND_URL" ]; then echo "FRONTEND_URL_PROD secret missing"; exit 1; fi
+          echo "Checking deep links on $FRONTEND_URL"
+          for path in '//login' '//demo'; do
+            url="$FRONTEND_URL$path"
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            echo "$url -> $code"
+            if [ "$code" != "200" ]; then
+              echo "Deep link $url did not return 200"; exit 1;
+            fi
+          done
 

@@ -1,22 +1,7 @@
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  # Serve existing files directly
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-  # SPA fallback to index.html
-  RewriteRule . /index.html [L]
-</IfModule>
+Options -Indexes -MultiViews
 
-# Basic caching for static assets
-<IfModule mod_expires.c>
-  ExpiresActive On
-  ExpiresByType text/css "access plus 7 days"
-  ExpiresByType application/javascript "access plus 7 days"
-  ExpiresByType image/svg+xml "access plus 30 days"
-  ExpiresByType image/png "access plus 30 days"
-  ExpiresByType image/jpeg "access plus 30 days"
-</IfModule>
-
-Options -Indexes
+# Serve index.html for any non-file/non-directory request
+# This enables deep links like /login or /demo to work in production
+# while still allowing static assets to be served normally.
+FallbackResource /index.html
 
