@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Optionnel: définissez FLY_BACKEND_APP dans les Secrets pour surcharger le nom
-      FLY_BACKEND_APP: ${{ secrets.FLY_BACKEND_APP || '' }}
+      # Fallback géré dans le script (pas d'expressions invalides ici)
+      FLY_BACKEND_APP: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,13 +22,16 @@ jobs:
       - name: Resolve app name and ensure exists
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          SECRET_APP: ${{ secrets.FLY_BACKEND_APP }}
           INPUT_APP: ${{ env.FLY_BACKEND_APP }}
           FALLBACK_APP: btpgo-ia
-          FLY_ORG: ${{ secrets.FLY_ORG || secrets.FLY_ORG_SLUG }}
+          ORG1: ${{ secrets.FLY_ORG }}
+          ORG2: ${{ secrets.FLY_ORG_SLUG }}
           RUN_ID: ${{ github.run_id }}
         run: |
           set -e
-          APP="$INPUT_APP"; if [ -z "$APP" ]; then APP="$FALLBACK_APP"; fi
+          APP="${SECRET_APP:-${INPUT_APP:-}}"; if [ -z "$APP" ]; then APP="$FALLBACK_APP"; fi
+          FLY_ORG="${ORG1:-${ORG2:-}}"
           if flyctl apps show "$APP" >/dev/null 2>&1; then
             echo "Using existing app: $APP"
           else
@@ -56,6 +60,7 @@ jobs:
           AI_ENGINE_URL: ${{ secrets.AI_ENGINE_URL }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
+          TEST_ADMIN_KEY: ${{ secrets.TEST_ADMIN_KEY }}
         run: |
           set -e
           ARGS=()
@@ -70,6 +75,7 @@ jobs:
           [ -n "$AI_ENGINE_URL" ] && ARGS+=(AI_ENGINE_URL="$AI_ENGINE_URL")
           [ -n "$OTEL_EXPORTER_OTLP_ENDPOINT" ] && ARGS+=(OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT")
           [ -n "$OTEL_SERVICE_NAME" ] && ARGS+=(OTEL_SERVICE_NAME="$OTEL_SERVICE_NAME")
+          [ -n "$TEST_ADMIN_KEY" ] && ARGS+=(TEST_ADMIN_KEY="$TEST_ADMIN_KEY")
           if [ ${#ARGS[@]} -eq 0 ]; then echo "No secrets to set"; exit 0; fi
           flyctl secrets set "${ARGS[@]}" --app "$FLY_BACKEND_APP"
 
@@ -110,3 +116,4 @@ jobs:
           if [ -z "$BACKEND_URL" ]; then echo "Skipping smoke test (BACKEND_URL_FLY not set)"; exit 0; fi
           npm ci --omit=dev || npm install --omit=dev
           node scripts/smoke.js
+

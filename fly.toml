@@ -9,8 +9,8 @@ primary_region = "cdg"
   PORT = "4000"
   NODE_ENV = "production"
   HEALTH_SKIP_DB = "true"
-  # Auto-instrumentation OpenTelemetry (charge backend/otel.js au démarrage)
-  NODE_OPTIONS = "--require ./otel.js"
+  # Auto-instrumentation OpenTelemetry (preload ESM via CJS wrapper)
+  NODE_OPTIONS = "--require ./otel-preload.cjs"
   # Nom de service par défaut (surchargé possible via secrets)
   OTEL_SERVICE_NAME = "btpgo-backend"
 

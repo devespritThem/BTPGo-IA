@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { API, apiFetch } from '../lib/api.js'
 import { setToken } from '../lib/auth.js'
 import { useToast } from '../components/ToastProvider.jsx'
@@ -50,12 +50,12 @@ export default function Login() {
           <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mot de passe" className="w-full border rounded px-3 py-2" />
           <input value={otp} onChange={e=>setOtp(e.target.value)} placeholder="OTP (2FA si actif)" className="w-full border rounded px-3 py-2" />
           <input value={backupCode} onChange={e=>setBackupCode(e.target.value)} placeholder="Code de secours (optionnel)" className="w-full border rounded px-3 py-2" />
-          <button disabled={loading} type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-60">{loading?'Connexion…':'Se connecter'}</button>
+          <button disabled={loading} type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-60">{loading?'Connexion.':'Se connecter'}</button>
         </form>
         <div className="mt-4 space-y-2">
           <button onClick={sso} className="w-full bg-gray-100 py-2 rounded hover:bg-gray-200">Se connecter avec SSO</button>
           <div className="text-sm text-gray-600 text-center">
-            Pas de compte ? <a href="/register" className="underline">Créer un compte</a>
+            Pas de compte ? <Link to="/register" className="underline">Créer un compte</Link>
           </div>
         </div>
         <p className="text-xs text-gray-500 mt-3">Backend: {API}</p>
@@ -63,3 +63,4 @@ export default function Login() {
     </div>
   )
 }
+

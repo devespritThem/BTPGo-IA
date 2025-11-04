@@ -14,8 +14,26 @@ import { registerInstrumentations } from '@opentelemetry/instrumentation';
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN);
 
 async function initTelemetry() {
+  // Allow hard-disable via env
+  const disabled = String(process.env.OTEL_SDK_DISABLED || '').toLowerCase();
+  if (disabled === 'true' || disabled === '1' || disabled === 'yes') {
+    try { console.warn('OTEL disabled via OTEL_SDK_DISABLED'); } catch {}
+    return;
+  }
+
   const serviceName = process.env.OTEL_SERVICE_NAME || 'btpgo-backend';
-  const otlpEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
+  // Only enable when an explicit, non-local OTLP endpoint is provided
+  const rawEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || '';
+  if (!rawEndpoint) {
+    try { console.warn('OTEL disabled: no OTEL_EXPORTER_OTLP_ENDPOINT provided'); } catch {}
+    return;
+  }
+  const ep = rawEndpoint.trim();
+  if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|::1)([:/]|$)/i.test(ep)) {
+    try { console.warn('OTEL disabled: OTLP endpoint points to localhost'); } catch {}
+    return;
+  }
+  const otlpEndpoint = ep.replace(/\/$/, '');
 
   // Compatible import for prisma/instrumentation (CommonJS) with tolerance
   let PrismaInstrumentation = null;
@@ -45,7 +63,7 @@ async function initTelemetry() {
   try {
     const sdk = new NodeSDK({
       resource: new Resource({ [SemanticResourceAttributes.SERVICE_NAME]: serviceName }),
-      traceExporter: new OTLPTraceExporter({ url: `${otlpEndpoint.replace(/\/$/, '')}/v1/traces` }),
+      traceExporter: new OTLPTraceExporter({ url: `${otlpEndpoint}/v1/traces` }),
       instrumentations,
     });
     await sdk.start();

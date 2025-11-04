@@ -12,7 +12,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      FLY_AI_APP: ${{ secrets.FLY_AI_APP || 'btpgo-ai' }}
+      # Fallback géré dans le script
+      FLY_AI_APP: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,5 +34,7 @@ jobs:
       - name: Deploy AI Engine (ai_engine/fly.toml)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          SECRET_AI_APP: ${{ secrets.FLY_AI_APP }}
         run: |
-          flyctl deploy --remote-only --config ai_engine/fly.toml --app "${{ env.FLY_AI_APP }}"
+          APP="${SECRET_AI_APP:-${FLY_AI_APP:-btpgo-ai}}"
+          flyctl deploy --remote-only --config ai_engine/fly.toml --app "$APP"

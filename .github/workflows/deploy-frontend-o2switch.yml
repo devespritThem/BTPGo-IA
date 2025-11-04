@@ -11,6 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      SFTP_PORT_VALUE: ${{ secrets.SFTP_PORT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,7 +79,7 @@ FallbackResource /index.html
           username: ${{ secrets.SFTP_USERNAME }}
           password: ${{ secrets.SFTP_PASSWORD }}
           protocol: ftps
-          port: ${{ secrets.SFTP_PORT || 21 }}
+          port: ${{ env.SFTP_PORT_VALUE != '' && env.SFTP_PORT_VALUE || '21' }}
           local-dir: frontend/dist/
           server-dir: ${{ secrets.SFTP_REMOTE_PATH }}/
           timeout: 600000
@@ -93,7 +95,7 @@ FallbackResource /index.html
           username: ${{ secrets.SFTP_USERNAME }}
           password: ${{ secrets.SFTP_PASSWORD }}
           protocol: ftps
-          port: ${{ secrets.SFTP_PORT || 21 }}
+          port: ${{ env.SFTP_PORT_VALUE != '' && env.SFTP_PORT_VALUE || '21' }}
           local-dir: frontend/dist/
           server-dir: public_html/
           timeout: 600000

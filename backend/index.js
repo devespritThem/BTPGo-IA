@@ -7,6 +7,7 @@ import { PrismaClient } from "@prisma/client";
 import systemRouter from "./routes/system.js";
 import authRouter from "./routes/auth.js";
 import demoRouter from "./routes/demo.js";
+import testRouter from "./routes/test.js";
 
 // Basic process-level error logging (helps in Fly logs and local)
 process.on("unhandledRejection", (e) => {
@@ -169,6 +170,7 @@ app.use(express.json());
 app.use(systemRouter);
 app.use(authRouter);
 app.use(demoRouter);
+app.use(testRouter);
 
 app.get("/", (_req, res) => res.json({ message: "BTPGo Backend running" }));
 app.get("/health", async (req, res) => {

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { apiFetch } from '../lib/api.js'
 import { setToken } from '../lib/auth.js'
@@ -43,7 +44,7 @@ export default function Register() {
           <button disabled={loading} type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:opacity-60">{loading?'Création…':'Créer mon compte'}</button>
         </form>
         <div className="mt-4 text-sm text-gray-600">
-          <a href="/login" className="underline">Déjà un compte ? Se connecter</a>
+          <Link to="/login" className="underline">Déjà un compte ? Se connecter</Link>
         </div>
       </div>
     </div>
