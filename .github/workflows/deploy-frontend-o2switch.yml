@@ -30,47 +30,21 @@ jobs:
           npm ci || npm install
           npm run build
 
-      - name: Ensure deep-link redirects exist (/login, /demo)
+      - name: Ensure SPA fallback (.htaccess)
         working-directory: frontend/dist
         run: |
           set -eu
-          mkdir -p login demo
-          cat > login/index.html << 'HTML'
-          <!doctype html>
-          <html lang="fr">
-            <head>
-              <meta charset="UTF-8" />
-              <meta http-equiv="refresh" content="0; url=/#/login">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-              <title>Redirection vers /#/login</title>
-              <script>
-                (function(){try{var qs=location.search||'';location.replace('/#/login'+(qs||''));}catch(_){location.href='/#/login';}})();
-              </script>
-            </head>
-            <body>Redirection vers <a href="/#/login">/#/login</a>...</body>
-          </html>
-          HTML
-          cat > demo/index.html << 'HTML'
-          <!doctype html>
-          <html lang="fr">
-            <head>
-              <meta charset="UTF-8" />
-              <meta http-equiv="refresh" content="0; url=/#/demo">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-              <title>Redirection vers /#/demo</title>
-              <script>
-                (function(){try{var qs=location.search||'';location.replace('/#/demo'+(qs||''));}catch(_){location.href='/#/demo';}})();
-              </script>
-            </head>
-            <body>Redirection vers <a href="/#/demo">/#/demo</a>...</body>
-          </html>
-          HTML
-          # Create minimal .htaccess fallback if missing
-          if [ ! -f .htaccess ]; then
-            printf '%s
-FallbackResource /index.html
-' "Options -Indexes -MultiViews" > .htaccess
-          fi
+          # Write stable SPA .htaccess for BrowserRouter
+          cat > .htaccess << 'HTACCESS'
+          RewriteEngine On
+          RewriteBase /
+          # If the request is for an existing file or directory, serve it
+          RewriteCond %{REQUEST_FILENAME} -f [OR]
+          RewriteCond %{REQUEST_FILENAME} -d
+          RewriteRule ^ - [L]
+          # Otherwise, serve index.html (SPA fallback)
+          RewriteRule . /index.html [L]
+          HTACCESS
 
       - name: Deploy dist via FTPS (explicit) to primary path
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -85,22 +59,6 @@ FallbackResource /index.html
           timeout: 600000
           state-name: .ftp-deploy-sync-state.json
           dangerous-clean-slate: true
-
-      - name: Deploy dist via FTPS (explicit) to public_html fallback
-        if: ${{ always() }}
-        continue-on-error: true
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USERNAME }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          protocol: ftps
-          port: ${{ env.SFTP_PORT_VALUE != '' && env.SFTP_PORT_VALUE || '21' }}
-          local-dir: frontend/dist/
-          server-dir: public_html/
-          timeout: 600000
-          state-name: .ftp-deploy-sync-state-public_html.json
-          dangerous-clean-slate: false
 
       - name: Purge Cloudflare cache (optional)
         env:
