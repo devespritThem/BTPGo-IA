@@ -76,18 +76,18 @@ jobs:
             echo "Skipping Cloudflare purge (missing CF env vars)";
           fi
 
-      - name: Verify deep links (HashRouter)
+      - name: Verify routes (SPA)
         env:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL_PROD }}
         run: |
           if [ -z "$FRONTEND_URL" ]; then echo "FRONTEND_URL_PROD secret missing"; exit 1; fi
-          echo "Checking deep links on $FRONTEND_URL"
-          for path in '//login' '//demo'; do
+          echo "Checking SPA routes on $FRONTEND_URL"
+          for path in '/login' '/demo'; do
             url="$FRONTEND_URL$path"
             code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
             echo "$url -> $code"
             if [ "$code" != "200" ]; then
-              echo "Deep link $url did not return 200"; exit 1;
+              echo "Route $url did not return 200"; exit 1;
             fi
           done
 
