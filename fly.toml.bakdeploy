@@ -43,7 +43,3 @@ primary_region = "cdg"
   cpu_kind = "shared"
   cpus = 1
 
-[deploy]
-  release_command = 'sh -lc ''npx prisma migrate deploy'''
-
-

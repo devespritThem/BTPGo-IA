@@ -6,9 +6,6 @@ import { apiFetch } from '../lib/api.js'
 export default function Layout() {
   const navigate = useNavigate()
   const [userEmail, setUserEmail] = useState('')
-  const [notifs, setNotifs] = useState([])
-  const [unread, setUnread] = useState(0)
-  const [showDrop, setShowDrop] = useState(false)
   const orgId = getOrgId()
   useEffect(() => {
     (async () => {
@@ -20,24 +17,6 @@ export default function Layout() {
       } catch {}
     })()
   }, [])
-  async function loadNotifs() {
-    try {
-      const r = await apiFetch('/notifications?unread=1&limit=5')
-      setNotifs(r.items || [])
-      setUnread((r.items || []).filter(n => !n.readAt).length)
-    } catch {}
-  }
-  useEffect(() => {
-    loadNotifs()
-    const id = setInterval(loadNotifs, 30000)
-    return () => clearInterval(id)
-  }, [])
-  async function markRead(id) {
-    try { await apiFetch('/notifications/read', { method: 'POST', body: { ids: [id] } }); await loadNotifs() } catch {}
-  }
-  async function markAllRead() {
-    try { await apiFetch('/notifications/read_all', { method: 'POST' }); await loadNotifs() } catch {}
-  }
   async function showMe() {
     try {
       const token = getToken();
@@ -82,31 +61,6 @@ export default function Layout() {
             {userEmail ? <span className="text-gray-600">Logged in: {userEmail}</span> : null}
             <label className="text-gray-500">Org ID</label>
             <input defaultValue={orgId} onChange={onOrgChange} placeholder="auto" className="border rounded px-2 py-1 text-sm" />
-            <div className="relative">
-              <button onClick={()=>setShowDrop(v=>!v)} className="relative px-3 py-1 rounded hover:bg-gray-100" title="Notifications">
-                <span role="img" aria-label="bell">🔔</span>
-                {unread>0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{unread}</span>}
-              </button>
-              {showDrop && (
-                <div className="absolute right-0 mt-1 w-72 bg-white border rounded shadow">
-                  <div className="flex items-center justify-between px-3 py-2 border-b">
-                    <div className="text-sm font-medium">Notifications</div>
-                    <button onClick={markAllRead} className="text-xs text-blue-600 underline">Tout lu</button>
-                  </div>
-                  <div className="max-h-64 overflow-auto">
-                    {(notifs||[]).map(n => (
-                      <div key={n.id} className="px-3 py-2 border-b text-sm">
-                        <div className="font-medium">{n.title || n.type}</div>
-                        <div className="text-gray-600 text-xs">{n.message || ''}</div>
-                        <div className="mt-1 text-right"><button onClick={()=>markRead(n.id)} className="text-xs text-blue-600 underline">Marquer lu</button></div>
-                      </div>
-                    ))}
-                    {(!notifs || notifs.length===0) && <div className="px-3 py-2 text-sm text-gray-500">Aucune notification</div>}
-                  </div>
-                  <div className="px-3 py-2 text-right"><a href="/notifications" className="text-sm text-blue-600 underline" onClick={()=>setShowDrop(false)}>Tout voir</a></div>
-                </div>
-              )}
-            </div>
             <button onClick={showMe} className="bg-blue-50 px-3 py-1 rounded text-blue-700 hover:bg-blue-100">Mon compte</button>
             <button onClick={logout} className="bg-gray-100 px-3 py-1 rounded text-gray-700 hover:bg-gray-200">Logout</button>
           </div>
