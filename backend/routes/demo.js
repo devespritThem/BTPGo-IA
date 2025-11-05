@@ -5,13 +5,16 @@ import jwt from 'jsonwebtoken';
 const prisma = globalThis.__prisma || new PrismaClient();
 if (!globalThis.__prisma) globalThis.__prisma = prisma;
 
+// Enforce same JWT secret policy as /auth
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'development' ? 'dev-secret-change-me' : '');
+
 function verifyToken(req, res, next) {
   try {
     const auth = req.headers['authorization'] || '';
     const m = auth.match(/^Bearer\s+(.+)$/i);
     if (!m) return res.status(401).json({ error: 'missing_token' });
-    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-    const payload = jwt.verify(m[1], secret);
+    if (!JWT_SECRET) return res.status(500).json({ error: 'server_misconfig' });
+    const payload = jwt.verify(m[1], JWT_SECRET);
     req.user = payload;
     next();
   } catch (_e) {
