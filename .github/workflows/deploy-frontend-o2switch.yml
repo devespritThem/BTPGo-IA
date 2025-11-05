@@ -80,14 +80,16 @@ jobs:
         env:
           FRONTEND_URL: ${{ secrets.FRONTEND_URL_PROD }}
         run: |
-          if [ -z "$FRONTEND_URL" ]; then echo "FRONTEND_URL_PROD secret missing"; exit 1; fi
-          echo "Checking SPA routes on $FRONTEND_URL"
-          for path in '/login' '/demo'; do
-            url="$FRONTEND_URL$path"
-            code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+          set -euo pipefail
+          if [ -z "${FRONTEND_URL:-}" ]; then echo "FRONTEND_URL_PROD secret missing"; exit 1; fi
+          BASE="${FRONTEND_URL%/}"
+          echo "Checking SPA routes on $BASE"
+          for path in /login /demo; do
+            url="$BASE$path"
+            code=$(curl -s -L -o /dev/null -w "%{http_code}" "$url")
             echo "$url -> $code"
             if [ "$code" != "200" ]; then
-              echo "Route $url did not return 200"; exit 1;
+              echo "Route $url did not return 200 after redirects"; exit 1;
             fi
           done
 

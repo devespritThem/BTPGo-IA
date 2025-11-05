@@ -1,10 +1,22 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { clearToken, getOrgId, setOrgId, getToken } from '../lib/auth.js'
 import { apiFetch } from '../lib/api.js'
 
 export default function Layout() {
   const navigate = useNavigate()
+  const [userEmail, setUserEmail] = useState('')
   const orgId = getOrgId()
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = getToken()
+        if (!token) return
+        const me = await apiFetch('/auth/me', { token })
+        setUserEmail(me?.user?.email || '')
+      } catch {}
+    })()
+  }, [])
   async function showMe() {
     try {
       const token = getToken();
@@ -42,6 +54,7 @@ export default function Layout() {
             <NavLink to="/demo" className={navLink}>Démo</NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-2 text-sm">
+            {userEmail ? <span className="text-gray-600">Logged in: {userEmail}</span> : null}
             <label className="text-gray-500">Org ID</label>
             <input defaultValue={orgId} onChange={onOrgChange} placeholder="auto" className="border rounded px-2 py-1 text-sm" />
             <button onClick={showMe} className="bg-blue-50 px-3 py-1 rounded text-blue-700 hover:bg-blue-100">Mon compte</button>

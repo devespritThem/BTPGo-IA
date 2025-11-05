@@ -27,7 +27,7 @@ export async function apiFetch(path, { method = 'GET', headers = {}, body, token
     }
     if (res.status === 401) {
       try { clearAuthToken?.() } catch {}
-      try { window.location.hash = '#/login' } catch {}
+      try { window.location.assign('/login') } catch {}
     }
     throw new Error(msg)
   }

@@ -5,31 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>frontend</title>
-    <!-- Force HashRouter URLs if user hits /login or /demo directly -->
-    <script>
-      (function () {
-        try {
-          var path = location.pathname.replace(/\/{2,}/g, '/');
-          if (!location.hash && path !== '/') {
-            var next = '/#' + path + location.search;
-            next = next.replace('/#//', '/#/');
-            location.replace(next);
-            return;
-          }
-        } catch (_) {}
-      })();
-    </script>
-    <script>
-      (function () {
-        try {
-          var qs = new URLSearchParams(location.search);
-          if (qs.has('v')) return;
-          qs.set('v', String(Date.now()));
-          var next = location.pathname + '?' + qs.toString() + location.hash;
-          location.replace(next);
-        } catch (_) {}
-      })();
-    </script>
+    <!-- SPA fallback handled by server (.htaccess); no client-side URL mutation -->
   </head>
   <body>
     <div id="root"></div>

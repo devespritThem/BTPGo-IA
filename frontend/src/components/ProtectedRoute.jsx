@@ -11,6 +11,16 @@ export default function ProtectedRoute({ children }) {
     setReady(true)
   }, [])
 
+  // Écoute les changements de stockage (autres onglets) et réévalue le token
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e || !e.key || e.key !== 'btpgo_token') return
+      setHasToken(!!getToken())
+    }
+    try { window.addEventListener('storage', onStorage) } catch {}
+    return () => { try { window.removeEventListener('storage', onStorage) } catch {} }
+  }, [])
+
   if (!ready) return null
   if (!hasToken) return <Navigate to="/login" replace />
   return children

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ToastProvider } from './components/ToastProvider.jsx'
 import './index.css'
 import App from './App.jsx'
@@ -21,7 +21,7 @@ import AuthCallback from './pages/AuthCallback.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ToastProvider>
-      <HashRouter>
+      <BrowserRouter>
         <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -40,7 +40,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/billing/cancel" element={<BillingCancel />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         </Routes>
-      </HashRouter>
+      </BrowserRouter>
     </ToastProvider>
   </StrictMode>,
 )
