@@ -53,5 +53,46 @@ router.post('/notifications/read_all', verifyToken, async (_req, res) => {
   } catch { res.status(500).json({ error: 'notifications_read_all_failed' }); }
 });
 
-export default router;
+// GET /notifications/stream - Server-Sent Events (SSE)
+router.get('/notifications/stream', async (req, res) => {
+  // Verify token from Authorization header or token query param (for EventSource)
+  try {
+    let token = '';
+    const auth = req.headers['authorization'] || '';
+    const m = auth && auth.match(/^Bearer\s+(.+)$/i);
+    if (m) token = m[1];
+    if (!token) token = (req.query && req.query.token) ? String(req.query.token) : '';
+    if (!token) return res.status(401).end();
+    if (!JWT_SECRET) return res.status(500).end();
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload;
+  } catch { return res.status(401).end(); }
 
+  try {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    let lastIds = new Set();
+    const tick = async () => {
+      try {
+        const rows = await prisma.$queryRawUnsafe('SELECT id, orgId, userId, module, type, title, message, data, severity, readAt, createdAt FROM "Notification" WHERE readAt IS NULL ORDER BY createdAt DESC NULLS LAST LIMIT 5');
+        const items = Array.isArray(rows) ? rows : [];
+        const currentIds = new Set(items.map((n) => n.id));
+        const news = items.filter((n) => !lastIds.has(n.id));
+        lastIds = currentIds;
+        const payload = JSON.stringify({ items, news });
+        res.write(`event: batch\n`);
+        res.write(`data: ${payload}\n\n`);
+      } catch (e) {
+        try { res.write(`event: error\n`); res.write(`data: {}\n\n`); } catch {}
+      }
+    };
+    const iv = setInterval(tick, 15000);
+    tick();
+    req.on('close', () => { clearInterval(iv); try { res.end(); } catch {} });
+  } catch { try { res.end(); } catch {} }
+});
+
+export default router;

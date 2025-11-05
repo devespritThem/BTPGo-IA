@@ -1,15 +1,37 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { clearToken, getOrgId, setOrgId, getToken } from '../lib/auth.js'
-import { apiFetch, API } from '../lib/api.js'
+import { apiFetch } from '../lib/api.js'
 
 export default function Layout() {
   const navigate = useNavigate()
   const [userEmail, setUserEmail] = useState('')
   const [notifs, setNotifs] = useState([])
   const [unread, setUnread] = useState(0)
-  const [showDrop, setShowDrop] = useState(false)\n  const [notifLoading, setNotifLoading] = useState(false)
-  const orgId = getOrgId()\n  useEffect(() => {\n    (async () => {\n      try {\n        const token = getToken()\n        if (!token) return\n        const me = await apiFetch('/auth/me', { token })\n        setUserEmail(me?.user?.email || '')\n      } catch {}\n    })()\n  }, [])\n  async function loadNotifs() {\n    try {\n      setNotifLoading(true)\n      const r = await apiFetch('/notifications?unread=1&limit=5')\n      const items = r.items || []\n      const prev = notifs || []\n      const news = items.filter(n => !prev.some(p => p.id === n.id))\n      for (const n of news) { try { notify(n.title || n.message || 'Nouvelle notification', 'info') } catch {} }\n      setNotifs(items)\n      setUnread(items.filter(n => !n.readAt).length)\n    } catch {}\n    finally { setNotifLoading(false) }\n  }\n  useEffect(() => {\n    loadNotifs()\n    let es;\n    try {\n      const t = getToken()\n      if (t) {\n        es = new EventSource(${API}/notifications/stream?token=)\n        es.onmessage = (e) => {\n          try {\n            const data = JSON.parse(e.data||'{}')\n            const items = data.items || []\n            const news = data.news || []\n            if (Array.isArray(news)) {\n              for (const n of news) { notify(n.title || n.message || 'Nouvelle notification', 'info') }\n            }\n            setNotifs(items)\n            setUnread(items.filter(n => !n.readAt).length)\n          } catch {}\n        }\n      }\n    } catch {}\n    return () => { try { es && es.close() } catch {} }\n  }, [])
+  const [showDrop, setShowDrop] = useState(false)
+  const orgId = getOrgId()
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = getToken()
+        if (!token) return
+        const me = await apiFetch('/auth/me', { token })
+        setUserEmail(me?.user?.email || '')
+      } catch {}
+    })()
+  }, [])
+  async function loadNotifs() {
+    try {
+      const r = await apiFetch('/notifications?unread=1&limit=5')
+      setNotifs(r.items || [])
+      setUnread((r.items || []).filter(n => !n.readAt).length)
+    } catch {}
+  }
+  useEffect(() => {
+    loadNotifs()
+    const id = setInterval(loadNotifs, 30000)
+    return () => clearInterval(id)
+  }, [])
   async function markRead(id) {
     try { await apiFetch('/notifications/read', { method: 'POST', body: { ids: [id] } }); await loadNotifs() } catch {}
   }
@@ -79,7 +101,7 @@ export default function Layout() {
                         <div className="mt-1 text-right"><button onClick={()=>markRead(n.id)} className="text-xs text-blue-600 underline">Marquer lu</button></div>
                       </div>
                     ))}
-                    {(!notifs || notifs.length===0) && <div className="px-3 py-2 text-sm text-gray-500">{(!notifs || notifs.length===0) && !notifLoading ? <div className="px-3 py-2 text-sm text-gray-500">Aucune notification</div> : null}}
+                    {(!notifs || notifs.length===0) && <div className="px-3 py-2 text-sm text-gray-500">Aucune notification</div>}
                   </div>
                   <div className="px-3 py-2 text-right"><a href="/notifications" className="text-sm text-blue-600 underline" onClick={()=>setShowDrop(false)}>Tout voir {unread>0 ? `(${unread})` : ``}</a></div>
                 </div>
@@ -98,8 +120,6 @@ export default function Layout() {
     </div>
   )
 }
-
-
 
 
 
