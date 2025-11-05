@@ -12,6 +12,7 @@ import aiCallbackRouter from "./routes/ai_callback.js";
 import projectsRouter from "./routes/projects.js";
 import decisionsRouter from "./routes/decisions.js";
 import alertsRouter from "./routes/alerts.js";
+import notificationsRouter from "./routes/notifications.js";
 import testRouter from "./routes/test.js";
 
 // Basic process-level error logging (helps in Fly logs and local)
@@ -180,6 +181,7 @@ app.use(aiCallbackRouter);
 app.use(projectsRouter);
 app.use(decisionsRouter);
 app.use(alertsRouter);
+app.use(notificationsRouter);
 app.use(testRouter);
 
 app.get("/", (_req, res) => res.json({ message: "BTPGo Backend running" }));
@@ -210,17 +212,19 @@ async function processAiTasksOnce() {
     let endpoint = '';
     let payload = { taskId: task.id };
     if (task.type === 'extract_document') {
-      const drows = await prisma.$queryRawUnsafe('SELECT id, title, type, url FROM "Document" WHERE id = $1', task.refId || task.refid);
+      const drows = await prisma.$queryRawUnsafe('SELECT id, title, type, url, projectId FROM "Document" WHERE id = $1', task.refId || task.refid);
       const doc = Array.isArray(drows) && drows[0];
       if (!doc) throw new Error('document_missing');
       endpoint = basePath + '/nlp/extract';
       payload.document = doc;
+      payload.context = { orgId: task.orgId || null, projectId: doc?.projectId || null };
     } else if (task.type === 'tag_photo') {
-      const prows = await prisma.$queryRawUnsafe('SELECT id, url FROM "Photo" WHERE id = $1', task.refId || task.refid);
+      const prows = await prisma.$queryRawUnsafe('SELECT id, url, projectId FROM "Photo" WHERE id = $1', task.refId || task.refid);
       const photo = Array.isArray(prows) && prows[0];
       if (!photo) throw new Error('photo_missing');
       endpoint = basePath + '/vision/tag';
       payload.photo = photo;
+      payload.context = { orgId: task.orgId || null, projectId: photo?.projectId || null };
     } else {
       // unknown task type: mark error
       await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, lastError = $3, updatedAt = NOW() WHERE id = $1', task.id, 'error', 'unknown_task_type');
@@ -264,6 +268,9 @@ async function processAiTasksOnce() {
           const id = (al && al.id) || `al_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
           await prisma.$executeRawUnsafe('INSERT INTO "Alert" (id, orgId, projectId, type, severity, title, message, data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
             id, task.orgId || null, (al && al.projectId) || null, (al && al.type) || null, (al && al.severity) || null, (al && al.title) || null, (al && al.message) || null, (al && (al.data||null)));
+          const nid = `nt_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          await prisma.$executeRawUnsafe('INSERT INTO "Notification" (id, orgId, module, type, title, message, severity, data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+            nid, task.orgId || null, 'alert', al?.type || null, al?.title || 'Alerte', al?.message || null, al?.severity || null, al?.data || null);
         }
       }
       if (Array.isArray(result?.decisions)) {
@@ -271,6 +278,9 @@ async function processAiTasksOnce() {
           const id = (dc && dc.id) || `dc_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
           await prisma.$executeRawUnsafe('INSERT INTO "Decision" (id, orgId, projectId, module, action, target, payload, confidence, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
             id, task.orgId || null, (dc && dc.projectId) || null, (dc && dc.module) || null, (dc && dc.action) || null, (dc && (dc.target||null)), (dc && (dc.payload||null)), (dc && (dc.confidence||null)), 'proposed');
+          const nid = `nt_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          await prisma.$executeRawUnsafe('INSERT INTO "Notification" (id, orgId, module, type, title, message, severity, data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+            nid, task.orgId || null, 'decision', dc?.action || null, 'Recommandation IA', dc?.payload?.summary || null, 'info', dc?.payload || null);
         }
       }
       if (Array.isArray(result?.extracts)) {

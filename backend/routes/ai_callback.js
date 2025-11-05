@@ -24,6 +24,10 @@ router.post('/ai/callback', async (req, res) => {
           const { orgId } = task;
           await prisma.$executeRawUnsafe('INSERT INTO "Alert" (id, orgId, projectId, type, severity, title, message, data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
             id, orgId || null, (al && al.projectId) || null, (al && al.type) || null, (al && al.severity) || null, (al && al.title) || null, (al && al.message) || null, (al && (al.data||null)));
+          // emit notification
+          const nid = `nt_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          await prisma.$executeRawUnsafe('INSERT INTO "Notification" (id, orgId, module, type, title, message, severity, data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+            nid, orgId || null, 'alert', al?.type || null, al?.title || 'Alerte', al?.message || null, al?.severity || null, al?.data || null);
         }
       }
     } catch {}
@@ -36,6 +40,10 @@ router.post('/ai/callback', async (req, res) => {
           const { orgId } = task;
           await prisma.$executeRawUnsafe('INSERT INTO "Decision" (id, orgId, projectId, module, action, target, payload, confidence, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
             id, orgId || null, (dc && dc.projectId) || null, (dc && dc.module) || null, (dc && dc.action) || null, (dc && (dc.target||null)), (dc && (dc.payload||null)), (dc && (dc.confidence||null)), 'proposed');
+          // emit notification
+          const nid = `nt_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          await prisma.$executeRawUnsafe('INSERT INTO "Notification" (id, orgId, module, type, title, message, severity, data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+            nid, orgId || null, 'decision', dc?.action || null, 'Recommandation IA', dc?.payload?.summary || null, 'info', dc?.payload || null);
         }
       }
     } catch {}
