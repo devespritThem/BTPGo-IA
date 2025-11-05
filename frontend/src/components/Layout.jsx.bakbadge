@@ -76,7 +76,7 @@ export default function Layout() {
             <NavLink to="/billing" className={navLink}>Facturation</NavLink>
             <NavLink to="/org/members" className={navLink}>Membres</NavLink>
             <NavLink to="/demo" className={navLink}>Démo</NavLink>
-            <NavLink to="/alerts" className={navLink}>Alertes<span className="ml-1 inline-block bg-red-600 text-white text-[10px] rounded-full px-1"></span></NavLink>\n            <NavLink to="/status" className={navLink}>Statut</NavLink>
+            <NavLink to="/status" className={navLink}>Statut</NavLink>
           </nav>
           <div className="ml-auto relative flex items-center gap-2 text-sm">
             {userEmail ? <span className="text-gray-600">Logged in: {userEmail}</span> : null}
