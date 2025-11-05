@@ -25,6 +25,7 @@ import ProjectNew from './pages/ProjectNew.jsx'
 import ProjectOverview from './pages/ProjectOverview.jsx'
 import Documents from './pages/Documents.jsx'
 import Photos from './pages/Photos.jsx'
+import Alerts from './pages/Alerts.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -47,6 +48,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="site/photos" element={<Photos />} />
           <Route path="demo" element={<Demo />} />
           <Route path="status" element={<Status />} />
+          <Route path="alerts" element={<Alerts />} />
           <Route path="projects" element={<Projects />} />
           <Route path="projects/new" element={<ProjectNew />} />
           <Route path="projects/:id/overview" element={<ProjectOverview />} />

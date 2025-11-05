@@ -44,18 +44,15 @@ export default function Layout() {
       <header className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center gap-6">
           <Link to="/" className="font-bold">BTPGo</Link>
-                    <nav className="flex items-center gap-4 text-sm">
+          <nav className="flex items-center gap-4 text-sm">
             <NavLink to="/" className={navLink}>Dashboard</NavLink>
             <NavLink to="/projects" className={navLink}>Projects</NavLink>
             <NavLink to="/marches" className={navLink}>Marchés</NavLink>
             <NavLink to="/devis" className={navLink}>Devis</NavLink>
             <NavLink to="/chantiers" className={navLink}>Chantiers</NavLink>
-            <NavLink to="/documents" className={navLink}>Documents</NavLink>
-            <NavLink to="/site/photos" className={navLink}>Photos</NavLink>
             <NavLink to="/billing" className={navLink}>Facturation</NavLink>
             <NavLink to="/org/members" className={navLink}>Membres</NavLink>
-            <NavLink to="/demo" className={navLink}>Démo</NavLink>
-            <NavLink to="/status" className={navLink}>Statut</NavLink>
+            <NavLink to="/demo" className={navLink}>Démo</NavLink>\n            <NavLink to="/projects" className={navLink}>Projects</NavLink>\n            <NavLink to="/documents" className={navLink}>Documents</NavLink>\n            <NavLink to="/site/photos" className={navLink}>Photos</NavLink>\n            <NavLink to="/status" className={navLink}>Statut</NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-2 text-sm">
             {userEmail ? <span className="text-gray-600">Logged in: {userEmail}</span> : null}
