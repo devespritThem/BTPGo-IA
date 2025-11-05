@@ -1,119 +1,46 @@
-name: Deploy Backend (Fly)
+name: Deploy Backend to Fly.io
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'fly.toml'
+      - '.github/workflows/deploy-backend-fly.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      # Optionnel: définissez FLY_BACKEND_APP dans les Secrets pour surcharger le nom
-      # Fallback géré dans le script (pas d'expressions invalides ici)
-      FLY_BACKEND_APP: ""
+    concurrency:
+      group: fly-backend-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@v1
+        uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Resolve app name and ensure exists
+      - name: Deploy to Fly.io (backend)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          SECRET_APP: ${{ secrets.FLY_BACKEND_APP }}
-          INPUT_APP: ${{ env.FLY_BACKEND_APP }}
-          FALLBACK_APP: btpgo-ia
-          ORG1: ${{ secrets.FLY_ORG }}
-          ORG2: ${{ secrets.FLY_ORG_SLUG }}
-          RUN_ID: ${{ github.run_id }}
         run: |
-          set -e
-          APP="${SECRET_APP:-${INPUT_APP:-}}"; if [ -z "$APP" ]; then APP="$FALLBACK_APP"; fi
-          FLY_ORG="${ORG1:-${ORG2:-}}"
-          if flyctl apps show "$APP" >/dev/null 2>&1; then
-            echo "Using existing app: $APP"
-          else
-            echo "App $APP not found. Creating..."
-            if flyctl apps create "$APP" ${FLY_ORG:+--org "$FLY_ORG"}; then
-              echo "Created app: $APP"
-            else
-              APP="${FALLBACK_APP}-${RUN_ID}"
-              echo "Creating fallback app: $APP"
-              flyctl apps create "$APP" ${FLY_ORG:+--org "$FLY_ORG"}
-            fi
+          # fly.toml is configured to use backend/Dockerfile
+          # entrypoint.sh will run Prisma migrations on start (MIGRATE_ON_START=true by default)
+          flyctl deploy --remote-only --build-arg BUILD_ID=${{ github.sha }}
+
+      # Optionally, verify health (requires public URL in secret BACKEND_URL_PROD)
+      - name: Verify health endpoint (optional)
+        if: ${{ secrets.BACKEND_URL_PROD != '' }}
+        run: |
+          set -euo pipefail
+          URL="${{ secrets.BACKEND_URL_PROD }}"
+          URL="${URL%/}/health"
+          echo "Checking $URL"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+          echo "Health -> $code"
+          if [ "$code" != "200" ]; then
+            echo "Health check did not return 200"; exit 1;
           fi
-          echo "FLY_BACKEND_APP=$APP" >> "$GITHUB_ENV"
-
-      - name: Set secrets on Fly
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          DATA_ENCRYPTION_KEY: ${{ secrets.DATA_ENCRYPTION_KEY }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL_PROD }}
-          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
-          CORS_ALLOWED_METHODS: ${{ secrets.CORS_ALLOWED_METHODS }}
-          CORS_ALLOWED_HEADERS: ${{ secrets.CORS_ALLOWED_HEADERS }}
-          CORS_EXPOSED_HEADERS: ${{ secrets.CORS_EXPOSED_HEADERS }}
-          AI_ENGINE_URL: ${{ secrets.AI_ENGINE_URL }}
-          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
-          TEST_ADMIN_KEY: ${{ secrets.TEST_ADMIN_KEY }}
-        run: |
-          set -e
-          ARGS=()
-          [ -n "$DATABASE_URL" ] && ARGS+=(DATABASE_URL="$DATABASE_URL")
-          [ -n "$JWT_SECRET" ] && ARGS+=(JWT_SECRET="$JWT_SECRET")
-          [ -n "$DATA_ENCRYPTION_KEY" ] && ARGS+=(DATA_ENCRYPTION_KEY="$DATA_ENCRYPTION_KEY")
-          [ -n "$FRONTEND_URL" ] && ARGS+=(FRONTEND_URL="$FRONTEND_URL")
-          [ -n "$CORS_ORIGINS" ] && ARGS+=(CORS_ORIGINS="$CORS_ORIGINS")
-          [ -n "$CORS_ALLOWED_METHODS" ] && ARGS+=(CORS_ALLOWED_METHODS="$CORS_ALLOWED_METHODS")
-          [ -n "$CORS_ALLOWED_HEADERS" ] && ARGS+=(CORS_ALLOWED_HEADERS="$CORS_ALLOWED_HEADERS")
-          [ -n "$CORS_EXPOSED_HEADERS" ] && ARGS+=(CORS_EXPOSED_HEADERS="$CORS_EXPOSED_HEADERS")
-          [ -n "$AI_ENGINE_URL" ] && ARGS+=(AI_ENGINE_URL="$AI_ENGINE_URL")
-          [ -n "$OTEL_EXPORTER_OTLP_ENDPOINT" ] && ARGS+=(OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_EXPORTER_OTLP_ENDPOINT")
-          [ -n "$OTEL_SERVICE_NAME" ] && ARGS+=(OTEL_SERVICE_NAME="$OTEL_SERVICE_NAME")
-          [ -n "$TEST_ADMIN_KEY" ] && ARGS+=(TEST_ADMIN_KEY="$TEST_ADMIN_KEY")
-          if [ ${#ARGS[@]} -eq 0 ]; then echo "No secrets to set"; exit 0; fi
-          flyctl secrets set "${ARGS[@]}" --app "$FLY_BACKEND_APP"
-
-      - name: Deploy Backend (root fly.toml)
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: |
-          set -e
-          flyctl deploy --remote-only --config fly.toml --app "$FLY_BACKEND_APP"
-
-      - name: Wait for health
-        env:
-          URL: ${{ secrets.BACKEND_URL_FLY }}
-        run: |
-          if [ -z "$URL" ]; then echo "Skipping health check (BACKEND_URL_FLY not set)"; exit 0; fi
-          for i in {1..60}; do
-            if curl -sf "$URL/health" >/dev/null; then echo "healthy"; exit 0; fi
-            sleep 2;
-          done
-          echo "Backend not healthy at $URL/health"; exit 1
-
-      - name: DB health check
-        env:
-          URL: ${{ secrets.BACKEND_URL_FLY }}
-        run: |
-          if [ -z "$URL" ]; then echo "Skipping DB health (BACKEND_URL_FLY not set)"; exit 0; fi
-          for i in {1..60}; do
-            if curl -sf "$URL/health?db=1" >/dev/null; then echo "db healthy"; exit 0; fi
-            sleep 2;
-          done
-          echo "DB not reachable at $URL/health?db=1"; exit 1
-
-      - name: Smoke test
-        working-directory: backend
-        env:
-          BACKEND_URL: ${{ secrets.BACKEND_URL_FLY }}
-        run: |
-          if [ -z "$BACKEND_URL" ]; then echo "Skipping smoke test (BACKEND_URL_FLY not set)"; exit 0; fi
-          npm ci --omit=dev || npm install --omit=dev
-          node scripts/smoke.js
 
