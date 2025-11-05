@@ -196,28 +196,88 @@ app.get("/health", async (req, res) => {
 // --- Minimal background worker: pick pending AI tasks and try to process ---
 async function processAiTasksOnce() {
   try {
-    const rows = await prisma.$queryRawUnsafe('SELECT id, type, refId FROM "AiTask" WHERE status = $1 ORDER BY createdAt ASC LIMIT 1', 'pending');
+    const rows = await prisma.$queryRawUnsafe('SELECT id, type, refId, orgId FROM "AiTask" WHERE status = $1 ORDER BY createdAt ASC LIMIT 1', 'pending');
     const task = Array.isArray(rows) && rows[0];
     if (!task) return; // nothing to do
     // mark processing
     await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, updatedAt = NOW(), attempts = attempts + 1 WHERE id = $1', task.id, 'processing');
-    // For MVP: if AI engine health is OK, immediately mark done (defer real call integration)
-    const base = process.env.AI_ENGINE_URL || 'http://localhost:8000';
-    let ok = false;
-    try {
-      const u = new URL(base);
-      const agent = (u.protocol === 'https:') ? https : http;
-      const opts = { protocol: u.protocol, hostname: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80), method: 'GET', path: (u.pathname.replace(/\/$/, '')) + '/health' };
-      await new Promise((resolve) => {
-        const r = agent.request(opts, (p) => { ok = (p.statusCode||500) < 500; resolve(); });
-        r.on('error', () => resolve()); r.end();
-      });
-    } catch {}
-    if (!ok) {
-      await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, lastError = $3, updatedAt = NOW() WHERE id = $1', task.id, 'pending', 'ai_unreachable');
+    // Build AI endpoint and payload according to task type
+    const basePath = (aiUrl.pathname || '/').replace(/\/$/, '');
+    let endpoint = '';
+    let payload = { taskId: task.id };
+    if (task.type === 'extract_document') {
+      const drows = await prisma.$queryRawUnsafe('SELECT id, title, type, url FROM "Document" WHERE id = $1', task.refId || task.refid);
+      const doc = Array.isArray(drows) && drows[0];
+      if (!doc) throw new Error('document_missing');
+      endpoint = basePath + '/nlp/extract';
+      payload.document = doc;
+    } else if (task.type === 'tag_photo') {
+      const prows = await prisma.$queryRawUnsafe('SELECT id, url FROM "Photo" WHERE id = $1', task.refId || task.refid);
+      const photo = Array.isArray(prows) && prows[0];
+      if (!photo) throw new Error('photo_missing');
+      endpoint = basePath + '/vision/tag';
+      payload.photo = photo;
+    } else {
+      // unknown task type: mark error
+      await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, lastError = $3, updatedAt = NOW() WHERE id = $1', task.id, 'error', 'unknown_task_type');
       return;
     }
-    // Mark done (real extraction handled later via callback)
+
+    // POST JSON to AI Engine
+    const opts = {
+      protocol: aiUrl.protocol,
+      hostname: aiUrl.hostname,
+      port: aiUrl.port || (aiIsHttps ? 443 : 80),
+      method: 'POST',
+      path: endpoint,
+      headers: { 'content-type': 'application/json', host: aiUrl.host },
+    };
+    const body = JSON.stringify(payload);
+    const result = await new Promise((resolve, reject) => {
+      const req2 = aiAgent.request(opts, (pres) => {
+        let data = '';
+        pres.setEncoding('utf8');
+        pres.on('data', (c) => (data += c || ''));
+        pres.on('end', () => {
+          try {
+            const isOk = (pres.statusCode || 500) < 400;
+            const json = data ? JSON.parse(data) : {};
+            return isOk ? resolve(json) : reject(new Error(json?.error || `ai_${pres.statusCode}`));
+          } catch (e) {
+            return reject(new Error('ai_invalid_json'));
+          }
+        });
+      });
+      req2.on('error', (e) => reject(e));
+      req2.write(body);
+      req2.end();
+    });
+
+    // Persist results (if AI responded synchronously)
+    try {
+      if (Array.isArray(result?.extracts)) {
+        for (const ex of result.extracts) {
+          const id = (ex && ex.id) || `ex_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          const payloadEx = ex && (ex.data || ex);
+          await prisma.$executeRawUnsafe('INSERT INTO "Extract" (id, sourceType, sourceId, json) VALUES ($1,$2,$3,$4)',
+            id, task.type === 'tag_photo' ? 'photo' : 'document', task.refId || task.refid, payloadEx || {});
+        }
+      }
+      if (Array.isArray(result?.embeddings)) {
+        for (const em of result.embeddings) {
+          const id = (em && em.id) || `em_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          const vec = em && (em.vector || em.values || em);
+          await prisma.$executeRawUnsafe('INSERT INTO "Embedding" (id, sourceType, sourceId, vector, dim, model) VALUES ($1,$2,$3,$4,$5,$6)',
+            id, task.type === 'tag_photo' ? 'photo' : 'document', task.refId || task.refid, vec || [], (em && em.dim) || null, (em && em.model) || null);
+        }
+      }
+      if (Array.isArray(result?.labels) && task.type === 'tag_photo') {
+        await prisma.$executeRawUnsafe('UPDATE "Photo" SET labels = $2 WHERE id = $1', task.refId || task.refid, result.labels);
+      }
+    } catch (e) {
+      try { console.warn('[ai-store]', e?.message || e); } catch {}
+    }
+
     await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, updatedAt = NOW() WHERE id = $1', task.id, 'done');
   } catch (e) {
     try { console.warn('[ai-worker]', e?.message || e); } catch {}

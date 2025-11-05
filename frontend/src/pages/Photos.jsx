@@ -31,7 +31,12 @@ export default function Photos() {
         {items.map(p => (
           <div key={p.id} className="bg-white rounded shadow overflow-hidden">
             {p.url ? <img src={p.url} alt="photo" className="w-full aspect-video object-cover" /> : <div className="h-40 bg-gray-100" />}
-            <div className="p-2 text-xs text-gray-600">{p.createdAt ? new Date(p.createdAt).toLocaleString() : ''}</div>
+            <div className="p-2 text-xs text-gray-600">
+              {p.createdAt ? new Date(p.createdAt).toLocaleString() : ''}
+              {Array.isArray(p.labels) && p.labels.length ? (
+                <div className="mt-1 text-[10px] text-gray-500">Tags: {p.labels.join(', ')}</div>
+              ) : null}
+            </div>
           </div>
         ))}
         {!items.length && <div className="text-gray-500">Aucune photo</div>}
@@ -39,4 +44,3 @@ export default function Photos() {
     </div>
   )
 }
-

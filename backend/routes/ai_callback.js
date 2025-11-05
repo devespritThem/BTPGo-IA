@@ -34,6 +34,13 @@ router.post('/ai/callback', async (req, res) => {
           id, task.type === 'tag_photo' ? 'photo' : 'document', task.refid || task.refId, payload || [], (em && em.dim) || null, (em && em.model) || null);
       }
     }
+    // Optional: labels (for photo tagging)
+    try {
+      if (Array.isArray(req.body?.labels) && (task.type === 'tag_photo')) {
+        await prisma.$executeRawUnsafe('UPDATE "Photo" SET labels = $2 WHERE id = $1', task.refid || task.refId, req.body.labels);
+      }
+    } catch {}
+
     await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, updatedAt = NOW() WHERE id = $1', String(taskId), 'done');
     res.json({ ok: true });
   } catch (e) {
@@ -42,4 +49,3 @@ router.post('/ai/callback', async (req, res) => {
 });
 
 export default router;
-
