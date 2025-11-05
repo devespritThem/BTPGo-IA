@@ -16,6 +16,30 @@ router.post('/ai/callback', async (req, res) => {
     const task = Array.isArray(row) && row[0];
     if (!task) return res.status(404).json({ error: 'task_not_found' });
 
+    // store alerts (if any)
+    try {
+      if (Array.isArray(req.body?.alerts)) {
+        for (const al of req.body.alerts) {
+          const id = (al && al.id) || `al_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          const { orgId } = task;
+          await prisma.$executeRawUnsafe('INSERT INTO "Alert" (id, orgId, projectId, type, severity, title, message, data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+            id, orgId || null, (al && al.projectId) || null, (al && al.type) || null, (al && al.severity) || null, (al && al.title) || null, (al && al.message) || null, (al && (al.data||null)));
+        }
+      }
+    } catch {}
+
+    // store decisions (if any)
+    try {
+      if (Array.isArray(req.body?.decisions)) {
+        for (const dc of req.body.decisions) {
+          const id = (dc && dc.id) || `dc_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          const { orgId } = task;
+          await prisma.$executeRawUnsafe('INSERT INTO "Decision" (id, orgId, projectId, module, action, target, payload, confidence, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+            id, orgId || null, (dc && dc.projectId) || null, (dc && dc.module) || null, (dc && dc.action) || null, (dc && (dc.target||null)), (dc && (dc.payload||null)), (dc && (dc.confidence||null)), 'proposed');
+        }
+      }
+    } catch {}
+
     // store extracts
     if (Array.isArray(extracts)) {
       for (const ex of extracts) {

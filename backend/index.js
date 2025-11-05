@@ -10,6 +10,8 @@ import demoRouter from "./routes/demo.js";
 import ingestRouter from "./routes/ingest.js";
 import aiCallbackRouter from "./routes/ai_callback.js";
 import projectsRouter from "./routes/projects.js";
+import decisionsRouter from "./routes/decisions.js";
+import alertsRouter from "./routes/alerts.js";
 import testRouter from "./routes/test.js";
 
 // Basic process-level error logging (helps in Fly logs and local)
@@ -176,6 +178,8 @@ app.use(demoRouter);
 app.use(ingestRouter);
 app.use(aiCallbackRouter);
 app.use(projectsRouter);
+app.use(decisionsRouter);
+app.use(alertsRouter);
 app.use(testRouter);
 
 app.get("/", (_req, res) => res.json({ message: "BTPGo Backend running" }));
@@ -255,6 +259,20 @@ async function processAiTasksOnce() {
 
     // Persist results (if AI responded synchronously)
     try {
+      if (Array.isArray(result?.alerts)) {
+        for (const al of result.alerts) {
+          const id = (al && al.id) || `al_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          await prisma.$executeRawUnsafe('INSERT INTO "Alert" (id, orgId, projectId, type, severity, title, message, data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+            id, task.orgId || null, (al && al.projectId) || null, (al && al.type) || null, (al && al.severity) || null, (al && al.title) || null, (al && al.message) || null, (al && (al.data||null)));
+        }
+      }
+      if (Array.isArray(result?.decisions)) {
+        for (const dc of result.decisions) {
+          const id = (dc && dc.id) || `dc_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          await prisma.$executeRawUnsafe('INSERT INTO "Decision" (id, orgId, projectId, module, action, target, payload, confidence, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+            id, task.orgId || null, (dc && dc.projectId) || null, (dc && dc.module) || null, (dc && dc.action) || null, (dc && (dc.target||null)), (dc && (dc.payload||null)), (dc && (dc.confidence||null)), 'proposed');
+        }
+      }
       if (Array.isArray(result?.extracts)) {
         for (const ex of result.extracts) {
           const id = (ex && ex.id) || `ex_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
