@@ -23,6 +23,8 @@ import Status from './pages/Status.jsx'
 import Projects from './pages/Projects.jsx'
 import ProjectNew from './pages/ProjectNew.jsx'
 import ProjectOverview from './pages/ProjectOverview.jsx'
+import Documents from './pages/Documents.jsx'
+import Photos from './pages/Photos.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -41,6 +43,8 @@ createRoot(document.getElementById('root')).render(
           <Route path="marches" element={<Marches />} />
           <Route path="devis" element={<Devis />} />
           <Route path="chantiers" element={<Chantiers />} />
+          <Route path="documents" element={<Documents />} />
+          <Route path="site/photos" element={<Photos />} />
           <Route path="demo" element={<Demo />} />
           <Route path="status" element={<Status />} />
           <Route path="projects" element={<Projects />} />

@@ -7,6 +7,8 @@ import { PrismaClient } from "@prisma/client";
 import systemRouter from "./routes/system.js";
 import authRouter from "./routes/auth.js";
 import demoRouter from "./routes/demo.js";
+import ingestRouter from "./routes/ingest.js";
+import aiCallbackRouter from "./routes/ai_callback.js";
 import projectsRouter from "./routes/projects.js";
 import testRouter from "./routes/test.js";
 
@@ -171,6 +173,8 @@ app.use(express.json());
 app.use(systemRouter);
 app.use(authRouter);
 app.use(demoRouter);
+app.use(ingestRouter);
+app.use(aiCallbackRouter);
 app.use(projectsRouter);
 app.use(testRouter);
 
@@ -188,5 +192,37 @@ app.get("/health", async (req, res) => {
     res.status(500).json({ status: "error", error: "db_unreachable" });
   }
 });
+
+// --- Minimal background worker: pick pending AI tasks and try to process ---
+async function processAiTasksOnce() {
+  try {
+    const rows = await prisma.$queryRawUnsafe('SELECT id, type, refId FROM "AiTask" WHERE status = $1 ORDER BY createdAt ASC LIMIT 1', 'pending');
+    const task = Array.isArray(rows) && rows[0];
+    if (!task) return; // nothing to do
+    // mark processing
+    await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, updatedAt = NOW(), attempts = attempts + 1 WHERE id = $1', task.id, 'processing');
+    // For MVP: if AI engine health is OK, immediately mark done (defer real call integration)
+    const base = process.env.AI_ENGINE_URL || 'http://localhost:8000';
+    let ok = false;
+    try {
+      const u = new URL(base);
+      const agent = (u.protocol === 'https:') ? https : http;
+      const opts = { protocol: u.protocol, hostname: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80), method: 'GET', path: (u.pathname.replace(/\/$/, '')) + '/health' };
+      await new Promise((resolve) => {
+        const r = agent.request(opts, (p) => { ok = (p.statusCode||500) < 500; resolve(); });
+        r.on('error', () => resolve()); r.end();
+      });
+    } catch {}
+    if (!ok) {
+      await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, lastError = $3, updatedAt = NOW() WHERE id = $1', task.id, 'pending', 'ai_unreachable');
+      return;
+    }
+    // Mark done (real extraction handled later via callback)
+    await prisma.$executeRawUnsafe('UPDATE "AiTask" SET status = $2, updatedAt = NOW() WHERE id = $1', task.id, 'done');
+  } catch (e) {
+    try { console.warn('[ai-worker]', e?.message || e); } catch {}
+  }
+}
+setInterval(processAiTasksOnce, 3000).unref?.();
 
 app.listen(PORT, HOST, () => console.log(`Server listening on ${HOST}:${PORT}`));
