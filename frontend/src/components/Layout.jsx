@@ -84,7 +84,7 @@ export default function Layout() {
             <input defaultValue={orgId} onChange={onOrgChange} placeholder="auto" className="border rounded px-2 py-1 text-sm" />
             <div className="relative">
               <button onClick={()=>setShowDrop(v=>!v)} className="relative px-3 py-1 rounded hover:bg-gray-100" title="Notifications">
-                <span role="img" aria-label="bell">🔔</span>
+                <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" className="inline-block text-gray-700"><path fill="currentColor" d="M12 22a2 2 0 0 0 1.985-1.75L14 20h-4a2 2 0 0 0 1.85 1.994L12 22Zm6-6v-4a6 6 0 1 0-12 0v4l-2 2v1h16v-1l-2-2Z"/></svg>
                 {unread>0 && <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1">{unread}</span>}
               </button>
               {showDrop && (
@@ -103,7 +103,7 @@ export default function Layout() {
                     ))}
                     {(!notifs || notifs.length===0) && <div className="px-3 py-2 text-sm text-gray-500">Aucune notification</div>}
                   </div>
-                  <div className="px-3 py-2 text-right"><a href="/notifications" className="text-sm text-blue-600 underline" onClick={()=>setShowDrop(false)}>Tout voir</a></div>
+                  <div className="px-3 py-2 text-right"><a href="/notifications" className="text-sm text-blue-600 underline" onClick={()=>setShowDrop(false)}>Tout voir {unread>0 ? `(${unread})` : ``}</a></div>
                 </div>
               )}
             </div>
@@ -120,6 +120,9 @@ export default function Layout() {
     </div>
   )
 }
+
+
+
 
 
 
