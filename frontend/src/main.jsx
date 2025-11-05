@@ -7,6 +7,8 @@ import App from './App.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
+import Landing from './pages/Landing.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Billing from './pages/Billing.jsx'
 import OrgMembers from './pages/OrgMembers.jsx'
@@ -18,14 +20,19 @@ import BillingSuccess from './pages/BillingSuccess.jsx'
 import BillingCancel from './pages/BillingCancel.jsx'
 import AuthCallback from './pages/AuthCallback.jsx'
 import Status from './pages/Status.jsx'
+import Projects from './pages/Projects.jsx'
+import ProjectNew from './pages/ProjectNew.jsx'
+import ProjectOverview from './pages/ProjectOverview.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ToastProvider>
       <BrowserRouter>
         <Routes>
+        <Route path="/landing" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
         <Route path="/" element={<ProtectedRoute><App /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
@@ -36,6 +43,9 @@ createRoot(document.getElementById('root')).render(
           <Route path="chantiers" element={<Chantiers />} />
           <Route path="demo" element={<Demo />} />
           <Route path="status" element={<Status />} />
+          <Route path="projects" element={<Projects />} />
+          <Route path="projects/new" element={<ProjectNew />} />
+          <Route path="projects/:id/overview" element={<ProjectOverview />} />
         </Route>
 
         <Route path="/billing/success" element={<BillingSuccess />} />

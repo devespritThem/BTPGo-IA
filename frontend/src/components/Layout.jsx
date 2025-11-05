@@ -46,6 +46,7 @@ export default function Layout() {
           <Link to="/" className="font-bold">BTPGo</Link>
           <nav className="flex items-center gap-4 text-sm">
             <NavLink to="/" className={navLink}>Dashboard</NavLink>
+            <NavLink to="/projects" className={navLink}>Projects</NavLink>
             <NavLink to="/marches" className={navLink}>Marchés</NavLink>
             <NavLink to="/devis" className={navLink}>Devis</NavLink>
             <NavLink to="/chantiers" className={navLink}>Chantiers</NavLink>

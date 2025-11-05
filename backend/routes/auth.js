@@ -144,4 +144,16 @@ router.get('/auth/me', verifyToken, async (req, res) => {
 // Example protected route
 router.get('/auth/ping', verifyToken, (_req, res) => res.json({ ok: true }));
 
+// POST /auth/forgot (stub): always respond OK for now
+router.post('/auth/forgot', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ error: 'missing_email' });
+    // TODO: generate token, send email; stub returns 200
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: 'forgot_failed' });
+  }
+});
+
 export default router;
